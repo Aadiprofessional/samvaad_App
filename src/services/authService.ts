@@ -71,6 +71,59 @@ export const signUp = async (userData: UserSignupData): Promise<any> => {
           created_at: new Date().toISOString()
         });
         await AsyncStorage.setItem(`pending_user_${signupResponse.data.user.id}`, userDataToStore);
+        
+        // Immediately create the user in the database using admin client
+        try {
+          console.log('Creating user profile immediately after signup');
+          const userId = signupResponse.data.user.id;
+          
+          // Generate a roll number for the user
+          const rollNumber = Math.floor(100000 + Math.random() * 900000).toString();
+          
+          // Create basic profile data
+          const profileData: any = {
+            id: userId,
+            email: userData.email,
+            name: userData.name,
+            role: userData.role,
+            roll_number: rollNumber,
+            email_confirmed: false,
+            created_at: new Date().toISOString(),
+            confirmation_sent_at: new Date().toISOString()
+          };
+          
+          // Add role-specific data
+          if (userData.role === 'deaf') {
+            profileData.proficiency = userData.proficiency;
+            profileData.issues = userData.issues;
+            profileData.illness_stage = userData.illnessStage;
+            profileData.age = userData.age;
+          } else if (userData.role === 'parent') {
+            profileData.relationship = userData.relationship;
+            profileData.child_name = userData.child_name;
+            profileData.child_roll_number = userData.childRollNumber;
+            profileData.purpose = userData.purpose;
+          } else if (userData.role === 'teacher') {
+            profileData.subjects = userData.subjects;
+            profileData.teaching_purpose = userData.teachingPurpose;
+            profileData.school = userData.school;
+          }
+          
+          // Create user profile in database using admin client (bypasses RLS)
+          const { error: profileError } = await supabaseAdmin
+            .from('users')
+            .upsert([profileData]);
+          
+          if (profileError) {
+            console.error('Error creating user profile:', profileError);
+            // Don't throw, continue with the signup flow
+          } else {
+            console.log('User profile created successfully in database');
+          }
+        } catch (profileErr) {
+          console.error('Error creating user profile:', profileErr);
+          // Continue with signup flow even if there's an error
+        }
       } catch (storageError) {
         console.warn('Failed to store user data, but auth succeeded');
       }
@@ -188,7 +241,62 @@ export const getCurrentUser = async () => {
       .eq('id', user.id)
       .single();
       
-    if (profileError) throw profileError;
+    if (profileError) {
+      console.error('Error getting user profile:', profileError);
+      
+      // Check if this is a "not found" error - if so, try to create the profile
+      if (profileError.code === 'PGRST116') {
+        console.log('User exists in auth but not in database, attempting to create profile');
+        
+        try {
+          // Generate a roll number
+          const rollNumber = Math.floor(100000 + Math.random() * 900000).toString();
+          
+          // Create basic profile from auth data
+          const profileData = {
+            id: user.id,
+            email: user.email,
+            name: user.user_metadata?.name || 'User',
+            role: user.user_metadata?.role || 'deaf',
+            roll_number: rollNumber,
+            email_confirmed: user.user_metadata?.email_verified || false,
+            created_at: new Date().toISOString()
+          };
+          
+          // Create user profile in database using admin client (bypasses RLS)
+          const { error: createError } = await supabaseAdmin
+            .from('users')
+            .upsert([profileData]);
+            
+          if (createError) {
+            console.error('Error creating missing user profile:', createError);
+            // Return just the user without profile
+            return { user, profile: null };
+          }
+          
+          // Fetch the newly created profile
+          const { data: newProfile, error: fetchError } = await supabaseAdmin
+            .from('users')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+            
+          if (fetchError) {
+            console.error('Error fetching newly created profile:', fetchError);
+            return { user, profile: null };
+          }
+          
+          console.log('Successfully created and retrieved missing user profile');
+          return { user, profile: newProfile };
+        } catch (createError) {
+          console.error('Error recovering user profile:', createError);
+          return { user, profile: null };
+        }
+      }
+      
+      // For other errors, just return the user without profile
+      return { user, profile: null };
+    }
     
     return { 
       user, 
@@ -330,6 +438,28 @@ export const checkEmailConfirmationStatus = async (userId: string) => {
       .single();
       
     if (error) {
+      // If user not found in database (PGRST116), it might be that the profile
+      // wasn't created yet, but the auth user might exist
+      if (error.code === 'PGRST116') {
+        console.log("User profile not found in database, checking if auth user exists");
+        
+        // Check if the user exists in auth
+        const userResponse = await supabaseAdmin.auth.admin.getUserById(userId);
+        
+        if (userResponse.error || !userResponse.data.user) {
+          console.log("User not found in auth system either, marking as expired");
+          return { confirmed: false, expired: true };
+        }
+        
+        console.log("Auth user exists but profile not created, allowing confirmation");
+        return { 
+          confirmed: false, 
+          expired: false,
+          minutesLeft: 10, // Give full time window in this case
+          needsProfileCreation: true
+        };
+      }
+      
       console.error("Database error checking confirmation status:", error);
       throw error;
     }
@@ -482,28 +612,19 @@ export const manuallyConfirmUserEmail = async (userId: string) => {
     
     const user = userResponse.data.user;
     
-    // Generate a roll number (if not already present)
-    const rollNumber = Math.floor(100000 + Math.random() * 900000).toString();
-    
-    // Get stored user data from AsyncStorage
-    let userData = null;
-    try {
-      const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
-      const storedData = await AsyncStorage.getItem(`pending_user_${userId}`);
-      if (storedData) {
-        userData = JSON.parse(storedData);
-        console.log("Found stored user data:", userData);
-      }
-    } catch (storageErr) {
-      console.warn("Error retrieving stored user data:", storageErr);
-    }
-    
     // Check if user already exists in the users table
-    const { data: existingUser } = await supabaseAdmin
+    const { data: existingUser, error: queryError } = await supabaseAdmin
       .from('users')
       .select('*')
       .eq('id', userId)
       .single();
+    
+    if (queryError && queryError.code !== 'PGRST116') { // PGRST116 is "not found"
+      console.error("Error checking for existing user:", queryError);
+      throw queryError;
+    }
+    
+    let profileData: any;
     
     if (existingUser) {
       console.log("User already exists in database, updating confirmation status");
@@ -521,11 +642,41 @@ export const manuallyConfirmUserEmail = async (userId: string) => {
         console.error("Error updating user confirmation status:", error);
         throw error;
       }
+      
+      // Get the updated user profile data
+      const { data: updatedProfile, error: fetchError } = await supabaseAdmin
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .single();
+        
+      if (fetchError) {
+        console.error("Error fetching updated profile:", fetchError);
+        throw fetchError;
+      }
+      
+      profileData = updatedProfile;
     } else {
       console.log("User not found in database, creating profile");
       
+      // Get stored user data from AsyncStorage
+      let userData = null;
+      try {
+        const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+        const storedData = await AsyncStorage.getItem(`pending_user_${userId}`);
+        if (storedData) {
+          userData = JSON.parse(storedData);
+          console.log("Found stored user data:", userData);
+        }
+      } catch (storageErr) {
+        console.warn("Error retrieving stored user data:", storageErr);
+      }
+      
+      // Generate a roll number (if not already present)
+      const rollNumber = Math.floor(100000 + Math.random() * 900000).toString();
+      
       // Create basic profile data
-      const profileData: any = {
+      profileData = {
         id: userId,
         email: user.email,
         name: user.user_metadata?.name || (userData?.name || 'User'),
@@ -576,7 +727,7 @@ export const manuallyConfirmUserEmail = async (userId: string) => {
     }
     
     console.log(`User ${userId} email manually confirmed`);
-    return { success: true };
+    return { success: true, user, profile: profileData };
   } catch (error) {
     console.error('Error in manual confirmation:', error);
     throw error;

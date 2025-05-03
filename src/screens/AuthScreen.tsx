@@ -23,6 +23,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { UserRole, UserSignupData } from '../services/authService';
 import { testSupabaseConnection } from '../services/supabaseClient';
+import { supabase } from '../services/supabaseClient';
 import NetworkStatusBar from '../components/NetworkStatusBar';
 import NetInfo from '@react-native-community/netinfo';
 
@@ -204,8 +205,10 @@ const AuthScreen = () => {
       
       // Store user ID for confirmation check
       if (result && result.user) {
-        setPendingUserId(result.user.id);
-        setShowEmailConfirmation(true);
+        // User profile is now created in authService.signUp
+        
+        // Navigate directly to Main screen after signup
+        navigation.replace('Main');
       } else {
         setError('Failed to create account. Please try again.');
       }
@@ -230,23 +233,12 @@ const AuthScreen = () => {
   };
   
   const handleEmailConfirmed = () => {
-    console.log("Email confirmed, transitioning to login screen");
-    Alert.alert(
-      'Account Confirmed!',
-      'Your account has been successfully confirmed. You can now log in.',
-      [
-        { 
-          text: 'Login Now', 
-          onPress: () => {
-            setShowEmailConfirmation(false);
-            setActiveTab('login');
-            setPendingUserId(null);
-            // Pre-fill the email field for login convenience
-            // Password will need to be entered again for security
-          } 
-        }
-      ]
-    );
+    console.log("Email confirmed, transitioning to main app");
+    setShowEmailConfirmation(false);
+    setPendingUserId(null);
+    
+    // The user is now logged in through the auth context, so App.tsx will
+    // automatically navigate to the main app
   };
   
   const handleConfirmationTimeout = () => {

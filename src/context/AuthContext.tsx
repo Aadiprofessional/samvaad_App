@@ -1,7 +1,8 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import { supabase } from '../services/supabaseClient';
+import { supabase, supabaseAdmin } from '../services/supabaseClient';
 import * as authService from '../services/authService';
 import { UserRole } from '../services/authService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Define the auth state
 interface AuthState {
@@ -15,7 +16,7 @@ interface AuthState {
 interface AuthContextType extends AuthState {
   signUp: (userData: authService.UserSignupData) => Promise<any>;
   signIn: (email: string, password: string) => Promise<any>;
-  signOut: () => Promise<void>;
+  signOut: () => Promise<boolean>;
   resetPassword: (email: string) => Promise<boolean>;
   updatePassword: (password: string) => Promise<boolean>;
   connectParentChild: (parentId: string, childRollNumber: string) => Promise<boolean>;
@@ -24,6 +25,7 @@ interface AuthContextType extends AuthState {
   updateProfile: (profileData: Partial<authService.UserSignupData>) => Promise<boolean>;
   resendConfirmationEmail: (email: string) => Promise<boolean>;
   getUserByRollNumber: (rollNumber: string) => Promise<any>;
+  manuallyConfirmUserEmail: (userId: string) => Promise<any>;
 }
 
 // Create the auth context
@@ -59,11 +61,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.log('Session retrieved:', session ? 'Session exists' : 'No session');
         
         if (session) {
+          // Store session in AsyncStorage for persistence
+          await AsyncStorage.setItem('userSession', JSON.stringify(session));
+          
           // Get the user profile
           console.log('Getting user profile for session user:', session.user.id);
           const userInfo = await authService.getCurrentUser();
           
-          if (userInfo) {
+          if (userInfo && userInfo.profile) {
             console.log('User profile loaded successfully');
             setState({
               user: userInfo.user,
@@ -72,8 +77,72 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               isLoading: false,
             });
           } else {
-            // User exists but profile not loaded
-            console.log('Session exists but no profile found');
+            // User exists but profile not loaded - try to recreate it
+            console.log('Session exists but no profile found in the database. Attempting to create it now...');
+            
+            try {
+              // Get user details from the auth API
+              const { data: userData, error: userError } = await supabaseAdmin.auth.admin.getUserById(session.user.id);
+              
+              if (userError || !userData.user) {
+                throw userError || new Error('Failed to retrieve user data');
+              }
+              
+              const user = userData.user;
+              console.log('Retrieved user data from auth:', user.email);
+              
+              // Generate a roll number
+              const rollNumber = Math.floor(100000 + Math.random() * 900000).toString();
+              
+              // Create a basic profile for the user
+              const profileData = {
+                id: user.id,
+                email: user.email,
+                name: user.user_metadata?.name || 'User',
+                role: user.user_metadata?.role || 'deaf',
+                roll_number: rollNumber,
+                email_confirmed: user.user_metadata?.email_verified || true, // Check email_verified in metadata
+                email_confirmed_at: new Date().toISOString(),
+                created_at: new Date().toISOString()
+              };
+              
+              console.log('Creating missing user profile:', profileData);
+              
+              // Insert the profile using the admin client to bypass RLS
+              const { error: insertError } = await supabaseAdmin
+                .from('users')
+                .upsert([profileData]);
+                
+              if (insertError) {
+                console.error('Error creating missing profile:', insertError);
+                // Continue and set user state without profile
+              } else {
+                console.log('Successfully created missing user profile');
+                
+                // Fetch the newly created profile
+                const { data: newProfile, error: fetchError } = await supabaseAdmin
+                  .from('users')
+                  .select('*')
+                  .eq('id', user.id)
+                  .single();
+                  
+                if (!fetchError && newProfile) {
+                  console.log('Retrieved newly created profile');
+                  setState({
+                    user: user,
+                    profile: newProfile,
+                    session,
+                    isLoading: false
+                  });
+                  return; // Exit early since we've set the state
+                }
+              }
+            } catch (recoveryError) {
+              console.error('Error recovering missing profile:', recoveryError);
+              // Continue with setting user without profile
+            }
+            
+            // If recovery failed, set state with just the user
             setState({
               user: session.user,
               profile: null,
@@ -112,6 +181,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         if (event === 'SIGNED_IN' && session) {
           console.log('User signed in, getting profile...');
+          // Store session in AsyncStorage for persistence
+          await AsyncStorage.setItem('userSession', JSON.stringify(session));
+          
           // Get user profile
           const userInfo = await authService.getCurrentUser();
           
@@ -124,6 +196,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           console.log('Auth state updated after sign-in');
         } else if (event === 'SIGNED_OUT') {
           console.log('User signed out, clearing state');
+          // Clear session from AsyncStorage
+          await AsyncStorage.removeItem('userSession');
+          
           // Clear state on sign out
           setState({
             user: null,
@@ -180,12 +255,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Sign out handler
   const handleSignOut = async () => {
+    console.log('Signing out...');
     try {
-      await authService.signOut();
-      // State will be updated by the auth listener
+      const { error } = await supabase.auth.signOut();
+      
+      // Clear AsyncStorage
+      await AsyncStorage.removeItem('userSession');
+      
+      if (error) {
+        console.error('Error signing out:', error);
+        throw error;
+      }
+      
+      console.log('Sign out successful');
+      setState({
+        user: null,
+        profile: null,
+        session: null,
+        isLoading: false,
+      });
+      
+      return true;
     } catch (error) {
-      console.error('Error in signOut:', error);
-      throw error;
+      console.error('Sign out failed:', error);
+      return false;
     }
   };
 
@@ -240,15 +333,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Check email confirmation status
   const handleCheckEmailConfirmationStatus = async (userId: string) => {
     try {
+      console.log("Checking email confirmation for user:", userId);
+      
       if (!userId) {
-        console.error("Cannot check confirmation status: userId is empty");
         throw new Error("Invalid user ID");
       }
       
-      console.log("Checking email confirmation for user:", userId);
       const status = await authService.checkEmailConfirmationStatus(userId);
       
-      // If user is confirmed, we should refresh their data
+      // If user is confirmed, we should refresh their data and update the database
       if (status.confirmed) {
         console.log("User confirmed, refreshing user data");
         
@@ -264,17 +357,107 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               session: null, // This will be set on next login
               isLoading: false,
             });
+            
+            // Update the confirmation status in the database
+            try {
+              const { error } = await supabase
+                .from('users')
+                .update({
+                  email_confirmed: true,
+                  email_confirmed_at: new Date().toISOString()
+                })
+                .eq('id', userId);
+                
+              if (error) {
+                console.error("Error updating confirmation status in database:", error);
+              } else {
+                console.log("Confirmation status updated in database");
+              }
+            } catch (dbError) {
+              console.error("Error updating database:", dbError);
+            }
           }
         } catch (err) {
           console.error('Error fetching confirmed user data:', err);
         }
-      } else {
-        console.log("User not yet confirmed, status:", status);
       }
       
+      console.log("User confirmation status:", status);
       return status;
     } catch (error) {
       console.error('Error checking email confirmation status:', error);
+      throw error;
+    }
+  };
+  
+  // Manually confirm user email
+  const handleManuallyConfirmUserEmail = async (userId: string) => {
+    try {
+      console.log("Manually confirming email for user:", userId);
+      
+      if (!userId) {
+        throw new Error("Invalid user ID");
+      }
+      
+      const result = await authService.manuallyConfirmUserEmail(userId);
+      
+      // Update the auth state with the confirmed user data
+      if (result && result.user && result.profile) {
+        console.log("Email manually confirmed, updating auth state with user data");
+        
+        // Fetch the user's credentials from AsyncStorage to automatically sign them in
+        const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+        const storedData = await AsyncStorage.getItem(`pending_user_${userId}`);
+        
+        if (storedData) {
+          const userData = JSON.parse(storedData);
+          
+          if (userData.email && userData.password) {
+            console.log("Found stored credentials, automatically signing in user");
+            try {
+              // Use our handleSignIn method to ensure proper state updates
+              await handleSignIn(userData.email, userData.password);
+              console.log("Auto sign-in successful after confirmation");
+              
+              // Make an extra check to ensure the profile is properly marked as confirmed
+              try {
+                const { error } = await supabase
+                  .from('users')
+                  .update({
+                    email_confirmed: true,
+                    email_confirmed_at: new Date().toISOString()
+                  })
+                  .eq('id', userId);
+                  
+                if (error) {
+                  console.error("Error during final confirmation status update:", error);
+                } else {
+                  console.log("Final confirmation status update successful");
+                }
+              } catch (updateErr) {
+                console.error("Error during final profile update:", updateErr);
+              }
+              
+              return result;
+            } catch (signInError) {
+              console.error("Auto sign-in failed:", signInError);
+              // Continue with just updating the state even if auto-login fails
+            }
+          }
+        }
+        
+        // If auto-login didn't happen, just update the state
+        setState({
+          user: result.user,
+          profile: result.profile,
+          session: null, // Will be set on next manual login
+          isLoading: false,
+        });
+      }
+      
+      return result;
+    } catch (error) {
+      console.error('Error in manual email confirmation:', error);
       throw error;
     }
   };
@@ -383,6 +566,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         updateProfile: handleUpdateProfile,
         resendConfirmationEmail: handleResendConfirmationEmail,
         getUserByRollNumber: handleGetUserByRollNumber,
+        manuallyConfirmUserEmail: handleManuallyConfirmUserEmail,
       }}
     >
       {children}

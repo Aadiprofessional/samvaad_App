@@ -11,7 +11,7 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import LinearGradient from 'react-native-linear-gradient';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
-import { manuallyConfirmUserEmail } from '../../services/authService';
+import { supabase } from '../../services/supabaseClient';
 
 interface EmailConfirmationProps {
   userId: string;
@@ -29,7 +29,7 @@ const EmailConfirmation: React.FC<EmailConfirmationProps> = ({
   onResendEmail,
 }) => {
   const { theme } = useTheme();
-  const { checkEmailConfirmationStatus } = useAuth();
+  const { checkEmailConfirmationStatus, manuallyConfirmUserEmail } = useAuth();
   
   // 10 minutes in seconds (as requested)
   const CONFIRMATION_TIMEOUT = 10 * 60; 
@@ -134,14 +134,33 @@ const EmailConfirmation: React.FC<EmailConfirmationProps> = ({
       
       if (status.confirmed) {
         console.log("Email confirmed on manual check");
+        // Update the user record in the database
+        try {
+          const { error } = await supabase
+            .from('users')
+            .update({
+              email_confirmed: true,
+              email_confirmed_at: new Date().toISOString()
+            })
+            .eq('id', userId);
+            
+          if (error) {
+            console.error("Error updating confirmation status:", error);
+          } else {
+            console.log("User confirmation status updated in database");
+          }
+        } catch (dbError) {
+          console.error("Error updating database:", dbError);
+        }
+        
         onConfirmed();
         return; // Exit early if confirmed
       } else if (status.expired) {
         console.log("Confirmation expired on manual check");
         onTimeout();
         return; // Exit early if expired
-      } else {
-        // Ask user if they've clicked the confirmation link, but only if we're not in the middle of another confirmation
+      }
+        // Ask user if they've clicked the confirmation link
         if (!isManuallyConfirming) {
           Alert.alert(
             'Email Confirmation',
@@ -153,41 +172,81 @@ const EmailConfirmation: React.FC<EmailConfirmationProps> = ({
               },
               {
                 text: 'Yes, I Clicked It',
-                onPress: async () => {
-                  if (isManuallyConfirming) return; // Prevent duplicate confirmations
-                  
-                  try {
-                    // Try to manually confirm the user
-                    console.log("Attempting manual confirmation for user", userId);
-                    setIsManuallyConfirming(true);
-                    setChecking(true);
-                    
-                    const result = await manuallyConfirmUserEmail(userId);
-                    if (result.success) {
-                      console.log("Manual confirmation successful");
-                      // Don't show success alert, just redirect
-                      onConfirmed();
-                    }
-                  } catch (error: any) {
-                    console.error("Error in manual confirmation:", error);
-                    Alert.alert(
-                      'Confirmation Failed',
-                      error.message || 'An error occurred while confirming your email.'
-                    );
-                  } finally {
-                    setIsManuallyConfirming(false);
-                    setChecking(false);
-                  }
-                }
+                onPress: handleManualConfirmation
               }
             ]
           );
         }
       }
-    } catch (err: any) {
+    catch (err: any) {
       console.error("Error on manual confirmation check:", err);
       setError(`Check failed: ${err.message || 'Unknown error'}`);
     } finally {
+      setChecking(false);
+    }
+  };
+
+  const handleManualConfirmation = async () => {
+    if (isManuallyConfirming) return; // Prevent duplicate confirmations
+    
+    try {
+      // Try to manually confirm the user
+      console.log("Attempting manual confirmation for user", userId);
+      setIsManuallyConfirming(true);
+      setChecking(true);
+      
+      // First, check if user exists in the database
+      try {
+        const { data, error } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', userId)
+          .single();
+        
+        if (error || !data) {
+          console.log("User not found in database, will create during confirmation");
+        } else {
+          console.log("User found in database, will update during confirmation");
+        }
+      } catch (dbErr) {
+        console.warn("Error checking for user in database:", dbErr);
+      }
+      
+      // Attempt manual confirmation through context
+      const result = await manuallyConfirmUserEmail(userId);
+      if (result.success) {
+        console.log("Manual confirmation successful");
+        
+        // Ensure confirmation is updated in database
+        try {
+          const { error } = await supabase
+            .from('users')
+            .update({
+              email_confirmed: true,
+              email_confirmed_at: new Date().toISOString()
+            })
+            .eq('id', userId);
+            
+          if (error) {
+            console.warn("Error updating confirmation status directly:", error);
+          } else {
+            console.log("Confirmation status updated directly in database");
+          }
+        } catch (dbErr) {
+          console.warn("Error updating database directly:", dbErr);
+        }
+        
+        // Don't show success alert, just redirect
+        onConfirmed();
+      }
+    } catch (error: any) {
+      console.error("Error in manual confirmation:", error);
+      Alert.alert(
+        'Confirmation Failed',
+        error.message || 'An error occurred while confirming your email.'
+      );
+    } finally {
+      setIsManuallyConfirming(false);
       setChecking(false);
     }
   };
