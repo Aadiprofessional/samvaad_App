@@ -1,95 +1,77 @@
 import React, { useEffect } from 'react';
-import { LogBox } from 'react-native';
-import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
+import { StatusBar, LogBox } from 'react-native';
+import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { enableScreens } from 'react-native-screens';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+// Contexts
 import { ThemeProvider, useTheme } from './context/ThemeContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
+
+// Screens
 import SplashScreen from './screens/SplashScreen';
 import OnboardingScreen from './screens/OnboardingScreen';
-import LoginScreen from './screens/auth/LoginScreen';
-import SignupScreen from './screens/auth/SignupScreen';
-import MainBottomTabs from './navigation/MainBottomTabs';
-import ForgotPasswordScreen from './screens/auth/ForgotPasswordScreen';
-import OTPVerificationScreen from './screens/auth/OTPVerificationScreen';
-import ResetPasswordScreen from './screens/auth/ResetPasswordScreen';
+import AuthScreen from './screens/AuthScreen';
+import MainNavigator from './navigation/MainNavigator';
 
-// Optimize screen containers
-enableScreens();
+// Types
+import { RootStackParamList } from './types/navigation';
 
 // Suppress warnings in development
 LogBox.ignoreLogs([
   'ViewPropTypes will be removed',
   'ColorPropType will be removed',
+  'Sending `onAnimatedValueUpdate` with no listeners registered',
 ]);
 
-// Define stack navigator types
-export type RootStackParamList = {
-  Splash: undefined;
-  Onboarding: undefined;
-  Auth: undefined;
-  Login: undefined;
-  Signup: undefined;
-  ForgotPassword: undefined;
-  OTPVerification: { email: string };
-  ResetPassword: { email: string };
-  Main: undefined;
-};
-
+// Create navigation stack
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
-// Create Auth Stack Navigator
-const AuthStack = () => {
-  return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="Login" component={LoginScreen} />
-      <Stack.Screen name="Signup" component={SignupScreen} />
-      <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
-      <Stack.Screen name="OTPVerification" component={OTPVerificationScreen} />
-      <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
-    </Stack.Navigator>
-  );
-};
-
-// App navigation with theme support
-const AppNavigation = () => {
+// Main navigation component
+const AppNavigator = () => {
   const { theme, isDarkMode } = useTheme();
+  const { user, isLoading } = useAuth();
   
-  // Create a custom navigation theme based on our app theme
-  const navigationTheme = {
-    ...(isDarkMode ? DarkTheme : DefaultTheme),
-    colors: {
-      ...(isDarkMode ? DarkTheme.colors : DefaultTheme.colors),
-      primary: theme.colors.primary,
-      background: theme.colors.background,
-      text: theme.colors.text,
-      card: theme.colors.card,
-      border: theme.colors.border,
-    },
-  };
+  // Handle loading state
+  if (isLoading) {
+    return <SplashScreen />;
+  }
   
   return (
-    <NavigationContainer theme={navigationTheme}>
+    <NavigationContainer>
+      <StatusBar
+        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+        backgroundColor={theme.background}
+      />
       <Stack.Navigator
-        initialRouteName="Splash"
-        screenOptions={{ headerShown: false }}
+        screenOptions={{
+          headerShown: false,
+          animation: 'fade',
+        }}
       >
-        <Stack.Screen name="Splash" component={SplashScreen} />
-        <Stack.Screen name="Onboarding" component={OnboardingScreen} />
-        <Stack.Screen name="Auth" component={AuthStack} />
-        <Stack.Screen name="Main" component={MainBottomTabs} />
+        {user ? (
+          // User is signed in
+          <Stack.Screen name="Main" component={MainNavigator} />
+        ) : (
+          // User is not signed in
+          <>
+            <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+            <Stack.Screen name="Auth" component={AuthScreen} />
+          </>
+        )}
       </Stack.Navigator>
     </NavigationContainer>
   );
 };
 
-// Root component
+// Root component with all providers
 const App = () => {
   return (
     <SafeAreaProvider>
       <ThemeProvider>
-        <AppNavigation />
+        <AuthProvider>
+          <AppNavigator />
+        </AuthProvider>
       </ThemeProvider>
     </SafeAreaProvider>
   );

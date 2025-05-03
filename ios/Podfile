@@ -23,6 +23,9 @@ target 'samvaad' do
     :app_path => "#{Pod::Config.instance.installation_root}/.."
   )
 
+  # Add vector icons pod and font configuration
+  pod 'RNVectorIcons', :path => '../node_modules/react-native-vector-icons'
+
   post_install do |installer|
     # https://github.com/facebook/react-native/blob/main/packages/react-native/scripts/react_native_pods.rb#L197-L202
     react_native_post_install(
@@ -31,5 +34,36 @@ target 'samvaad' do
       :mac_catalyst_enabled => false,
       # :ccache_enabled => true
     )
+    
+    # Vector Icons font fix - This adds the vector icon fonts to the build phase
+    installer.pods_project.targets.each do |target|
+      if target.name == 'RNVectorIcons'
+        font_files = [
+          'AntDesign.ttf',
+          'Entypo.ttf',
+          'EvilIcons.ttf',
+          'Feather.ttf',
+          'FontAwesome.ttf',
+          'FontAwesome5_Brands.ttf',
+          'FontAwesome5_Regular.ttf',
+          'FontAwesome5_Solid.ttf',
+          'FontAwesome6_Brands.ttf',
+          'FontAwesome6_Regular.ttf',
+          'FontAwesome6_Solid.ttf',
+          'Foundation.ttf',
+          'Ionicons.ttf',
+          'MaterialIcons.ttf',
+          'MaterialCommunityIcons.ttf',
+          'SimpleLineIcons.ttf',
+          'Octicons.ttf',
+          'Zocial.ttf',
+          'Fontisto.ttf'
+        ]
+        font_files.each do |font_file|
+          file_ref = installer.pods_project.new_file("../node_modules/react-native-vector-icons/Fonts/#{font_file}")
+          target.resources_build_phase.add_file_reference(file_ref)
+        end
+      end
+    end
   end
 end

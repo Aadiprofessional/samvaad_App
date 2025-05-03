@@ -24,6 +24,7 @@ import AppNavigator from './src/navigation/AppNavigator';
 
 // Import theme provider
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
+import { AuthProvider } from './src/context/AuthContext';
 
 // Import types
 import { RootStackParamList } from './src/types/navigation';
@@ -37,11 +38,6 @@ LogBox.ignoreLogs([
   'Sending `onAnimatedValueUpdate` with no listeners registered',
 ]);
 
-// Pre-load icon font to prevent question marks instead of icons
-Icon.loadFont().catch(error => {
-  console.warn('Failed to load MaterialCommunityIcons font:', error);
-});
-
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 // Customize navigation themes
@@ -52,12 +48,12 @@ const createCustomNavigationTheme = (isDarkMode: boolean, appTheme: any) => {
     ...baseTheme,
     colors: {
       ...baseTheme.colors,
-      primary: appTheme.colors.primary,
-      background: appTheme.colors.background,
-      card: appTheme.colors.card,
-      text: appTheme.colors.text,
-      border: appTheme.colors.border,
-      notification: appTheme.colors.notification,
+      primary: appTheme.primary,
+      background: appTheme.background,
+      card: appTheme.card,
+      text: appTheme.text,
+      border: appTheme.border,
+      notification: appTheme.notification,
     },
   };
 };
@@ -70,7 +66,7 @@ const AppContent = () => {
     <NavigationContainer theme={navigationTheme}>
       <StatusBar 
         barStyle={isDarkMode ? 'light-content' : 'dark-content'} 
-        backgroundColor={theme.colors.background}
+        backgroundColor={theme.background}
       />
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Splash" component={SplashScreen} />
@@ -87,7 +83,9 @@ const App = () => {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <ThemeProvider>
-          <AppContent />
+          <AuthProvider>
+            <AppContent />
+          </AuthProvider>
         </ThemeProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

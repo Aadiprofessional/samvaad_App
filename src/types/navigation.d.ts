@@ -7,18 +7,22 @@ export type RootStackParamList = {
   Onboarding: undefined;
   Auth: undefined;
   Main: undefined;
+};
+
+// Main Tab Navigation Types
+export type MainTabParamList = {
   Home: undefined;
-  Games: undefined;
-  Study: undefined;
   Translator: undefined;
-  Leaderboard: undefined;
+  Study: undefined;
+  Games: undefined;
+  Profile: undefined;
 };
 
 // Home Stack Types
 export type HomeStackParamList = {
   HomeScreen: undefined;
-  Profile: undefined;
   Settings: undefined;
+  Leaderboard: undefined;
 };
 
 // Games Stack Types
@@ -47,15 +51,19 @@ export type TranslatorStackParamList = {
   TranslatorMain: undefined;
 };
 
-// Leaderboard Stack Types
-export type LeaderboardStackParamList = {
-  LeaderboardMain: undefined;
+// Profile Stack Types
+export type ProfileStackParamList = {
+  ProfileMain: undefined;
+  EditProfile: undefined;
+  Achievements: undefined;
+  ChildConnections: undefined;
+  Settings: undefined;
 };
 
 // Define prop types for each stack navigator
 export type HomeScreenProps = NativeStackScreenProps<HomeStackParamList, 'HomeScreen'>;
-export type ProfileScreenProps = NativeStackScreenProps<HomeStackParamList, 'Profile'>;
 export type SettingsScreenProps = NativeStackScreenProps<HomeStackParamList, 'Settings'>;
+export type LeaderboardScreenProps = NativeStackScreenProps<HomeStackParamList, 'Leaderboard'>;
 
 export type GamesScreenProps = NativeStackScreenProps<GamesStackParamList, 'GamesScreen'>;
 export type FlipCardGameProps = NativeStackScreenProps<GamesStackParamList, 'FlipCardGame'>;
@@ -74,7 +82,10 @@ export type TestDetailScreenProps = NativeStackScreenProps<StudyStackParamList, 
 
 export type TranslatorScreenProps = NativeStackScreenProps<TranslatorStackParamList, 'TranslatorMain'>;
 
-export type LeaderboardScreenProps = NativeStackScreenProps<LeaderboardStackParamList, 'LeaderboardMain'>;
+export type ProfileScreenProps = NativeStackScreenProps<ProfileStackParamList, 'ProfileMain'>;
+export type EditProfileScreenProps = NativeStackScreenProps<ProfileStackParamList, 'EditProfile'>;
+export type AchievementsScreenProps = NativeStackScreenProps<ProfileStackParamList, 'Achievements'>;
+export type ChildConnectionsScreenProps = NativeStackScreenProps<ProfileStackParamList, 'ChildConnections'>;
 
 // Auth screens
 export type SplashScreenProps = NativeStackScreenProps<RootStackParamList, 'Splash'>;
@@ -86,10 +97,10 @@ export type HomeStackNavigationProp = NativeStackNavigationProp<HomeStackParamLi
 export type GamesStackNavigationProp = NativeStackNavigationProp<GamesStackParamList>;
 export type StudyStackNavigationProp = NativeStackNavigationProp<StudyStackParamList>;
 export type TranslatorStackNavigationProp = NativeStackNavigationProp<TranslatorStackParamList>;
-export type LeaderboardStackNavigationProp = NativeStackNavigationProp<LeaderboardStackParamList>;
+export type ProfileStackNavigationProp = NativeStackNavigationProp<ProfileStackParamList>;
 
-// Root Tab Navigation Prop
-export type RootTabNavigationProp = BottomTabNavigationProp<RootStackParamList>;
+// Tab Navigation Props
+export type MainTabNavigationProp = BottomTabNavigationProp<MainTabParamList>;
 
 declare global {
   namespace ReactNavigation {
