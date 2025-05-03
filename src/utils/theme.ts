@@ -18,6 +18,29 @@ export interface Theme {
   gradientPrimary: string[];
   gradientSecondary: string[];
   
+  // Colors object with nested gradients for specific components
+  colors: {
+    primary: string;
+    secondary: string;
+    text?: string;
+    textSecondary?: string;
+    background?: string;
+    border?: string;
+    card?: string;
+    gradients: {
+      play: string[];
+      learn: string[];
+      translate: string[];
+    }
+  };
+  
+  // Shadow styles for elevated elements
+  shadows: {
+    small: object;
+    medium: object;
+    large: object;
+  };
+  
   // Component specific colors
   inputBackground: string;
   inputText: string;
@@ -29,6 +52,7 @@ export interface Theme {
   tabBarInactive: string;
   cardBackground: string;
   shadow: string;
+  disabledBackground: string;
   
   // Opacity values
   disabledOpacity: number;
@@ -82,6 +106,47 @@ export const lightTheme: Theme = {
   gradientPrimary: ['#6a11cb', '#2575fc'],
   gradientSecondary: ['#00cdac', '#8ddad5'],
   
+  // Colors object with nested gradients for specific components
+  colors: {
+    primary: '#6200EE',
+    secondary: '#03DAC6',
+    text: '#333333',
+    textSecondary: '#666666',
+    background: '#F8F9FA',
+    border: '#E0E0E0',
+    card: '#FFFFFF',
+    gradients: {
+      play: ['#6a11cb', '#2575fc'],
+      learn: ['#00cdac', '#8ddad5'],
+      translate: ['#6a11cb', '#2575fc']
+    }
+  },
+  
+  // Shadow styles for elevated components
+  shadows: {
+    small: {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.18,
+      shadowRadius: 1.0,
+      elevation: 1,
+    },
+    medium: {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.25,
+      shadowRadius: 3.84,
+      elevation: 3,
+    },
+    large: {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.30,
+      shadowRadius: 4.65,
+      elevation: 6,
+    },
+  },
+  
   // Component specific colors
   inputBackground: '#FFFFFF',
   inputText: '#333333',
@@ -93,6 +158,7 @@ export const lightTheme: Theme = {
   tabBarInactive: '#888888',
   cardBackground: '#FFFFFF',
   shadow: 'rgba(0, 0, 0, 0.1)',
+  disabledBackground: '#CCCCCC',
   
   // Opacity values
   disabledOpacity: 0.6,
@@ -146,6 +212,47 @@ export const darkTheme: Theme = {
   gradientPrimary: ['#8E2DE2', '#4A00E0'],
   gradientSecondary: ['#00b09b', '#96c93d'],
   
+  // Colors object with nested gradients for specific components
+  colors: {
+    primary: '#BB86FC',
+    secondary: '#03DAC6',
+    text: '#E0E0E0',
+    textSecondary: '#AAAAAA',
+    background: '#121212',
+    border: '#333333',
+    card: '#1E1E1E',
+    gradients: {
+      play: ['#8E2DE2', '#4A00E0'],
+      learn: ['#00b09b', '#96c93d'],
+      translate: ['#8E2DE2', '#4A00E0']
+    }
+  },
+  
+  // Shadow styles for elevated components
+  shadows: {
+    small: {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.20,
+      shadowRadius: 1.41,
+      elevation: 2,
+    },
+    medium: {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.25,
+      shadowRadius: 3.84,
+      elevation: 5,
+    },
+    large: {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 7 },
+      shadowOpacity: 0.30,
+      shadowRadius: 9.11,
+      elevation: 10,
+    },
+  },
+  
   // Component specific colors
   inputBackground: '#2C2C2C',
   inputText: '#E0E0E0',
@@ -157,6 +264,7 @@ export const darkTheme: Theme = {
   tabBarInactive: '#777777',
   cardBackground: '#1E1E1E',
   shadow: 'rgba(0, 0, 0, 0.2)',
+  disabledBackground: '#444444',
   
   // Opacity values
   disabledOpacity: 0.4,

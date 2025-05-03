@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -22,6 +22,9 @@ import { RootStackParamList } from '../types/navigation';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { UserRole, UserSignupData } from '../services/authService';
+import { testSupabaseConnection } from '../services/supabaseClient';
+import NetworkStatusBar from '../components/NetworkStatusBar';
+import NetInfo from '@react-native-community/netinfo';
 
 // Import user type form components
 import DeafUserForm from '../components/auth/DeafUserForm';
@@ -33,7 +36,7 @@ import ForgotPasswordModal from '../components/auth/ForgotPasswordModal';
 const { width, height } = Dimensions.get('window');
 
 const AuthScreen = () => {
-  const { theme } = useTheme();
+  const { theme, isDarkMode, toggleTheme } = useTheme();
   const { signUp, signIn, resendConfirmationEmail } = useAuth();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
@@ -61,6 +64,63 @@ const AuthScreen = () => {
   const [showEmailConfirmation, setShowEmailConfirmation] = useState(false);
   const [pendingUserId, setPendingUserId] = useState<string | null>(null);
 
+  // New state to track form validity
+  const [isSignupFormValid, setIsSignupFormValid] = useState(false);
+
+  // State to track Supabase connection
+  const [supabaseConnectionTested, setSupabaseConnectionTested] = useState(false);
+  const [supabaseConnectionError, setSupabaseConnectionError] = useState<string | null>(null);
+
+  // Validate signup form whenever relevant fields change
+  useEffect(() => {
+    if (activeTab === 'signup') {
+      const baseFieldsValid = email && password && name && selectedUserRole;
+      let roleFieldsValid = false;
+      
+      // Check role-specific required fields
+      switch (selectedUserRole) {
+        case 'deaf':
+          roleFieldsValid = !!deafUserData.proficiency;
+          break;
+        case 'parent':
+          roleFieldsValid = !!parentUserData.relationship;
+          break;
+        case 'teacher':
+          roleFieldsValid = !!teacherUserData.subjects && teacherUserData.subjects.length > 0;
+          break;
+        default:
+          roleFieldsValid = false;
+      }
+      
+      setIsSignupFormValid(!!baseFieldsValid && !!roleFieldsValid);
+    }
+  }, [activeTab, email, password, name, selectedUserRole, deafUserData, parentUserData, teacherUserData]);
+
+  // Test Supabase connection on mount
+  useEffect(() => {
+    const testConnection = async () => {
+      try {
+        setIsLoading(true);
+        const result = await testSupabaseConnection();
+        
+        if (!result.success) {
+          setSupabaseConnectionError(result.error || 'Unknown connection error');
+        } else {
+          setSupabaseConnectionError(null);
+        }
+        
+        setSupabaseConnectionTested(true);
+      } catch (err) {
+        setSupabaseConnectionError('Failed to connect to the server');
+        setSupabaseConnectionTested(true);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    testConnection();
+  }, []);
+
   const handleLogin = async () => {
     if (!email || !password) {
       setError('Please enter email and password');
@@ -71,24 +131,31 @@ const AuthScreen = () => {
       setIsLoading(true);
       setError(null);
       
-      await signIn(email, password);
-      navigation.replace('Main');
+      const result = await signIn(email, password);
+      
+      if (result && result.user) {
+        navigation.replace('Main');
+      } else {
+        setError('Login failed. Please check your credentials.');
+      }
     } catch (err: any) {
-      setError(err.message || 'Failed to login. Please check your credentials.');
       console.error('Login error:', err);
+      
+      if (err.message?.includes('Invalid') || err.message?.includes('password') || err.message?.includes('email')) {
+        setError('Invalid email or password. Please try again.');
+      } else if (err.message?.includes('network') || err.message?.includes('failed') || err.message?.includes('connect')) {
+        setError('Network error. Please check your internet connection.');
+      } else {
+        setError(err.message || 'Failed to login. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleSignup = async () => {
-    if (!email || !password || !name) {
+    if (!isSignupFormValid) {
       setError('Please fill in all required fields');
-      return;
-    }
-    
-    if (!selectedUserRole) {
-      setError('Please select your user type');
       return;
     }
     
@@ -108,12 +175,14 @@ const AuthScreen = () => {
       setIsLoading(true);
       setError(null);
       
+      console.log(`Starting signup process for ${email} as ${selectedUserRole}`);
+      
       // Prepare signup data based on selected role
       const userData: UserSignupData = {
         email,
         password,
         name,
-        role: selectedUserRole,
+        role: selectedUserRole!,
       };
       
       // Add role-specific data
@@ -129,17 +198,28 @@ const AuthScreen = () => {
           break;
       }
       
-      // Sign up user
+      // Simple signup call
       const result = await signUp(userData);
+      console.log('SignUp API response:', result);
       
       // Store user ID for confirmation check
       if (result && result.user) {
         setPendingUserId(result.user.id);
         setShowEmailConfirmation(true);
+      } else {
+        setError('Failed to create account. Please try again.');
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to sign up. Please try again.');
       console.error('Signup error:', err);
+      
+      // Handle common error cases
+      if (err.message?.includes('already registered')) {
+        setError('This email is already registered. Please try logging in instead.');
+      } else if (err.message?.includes('network') || err.message?.includes('failed') || err.message?.includes('connect')) {
+        setError('Network error. Please check your internet connection and try again.');
+      } else {
+        setError(err.message || 'Failed to sign up. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -150,6 +230,7 @@ const AuthScreen = () => {
   };
   
   const handleEmailConfirmed = () => {
+    console.log("Email confirmed, transitioning to login screen");
     Alert.alert(
       'Account Confirmed!',
       'Your account has been successfully confirmed. You can now log in.',
@@ -160,6 +241,8 @@ const AuthScreen = () => {
             setShowEmailConfirmation(false);
             setActiveTab('login');
             setPendingUserId(null);
+            // Pre-fill the email field for login convenience
+            // Password will need to be entered again for security
           } 
         }
       ]
@@ -167,6 +250,7 @@ const AuthScreen = () => {
   };
   
   const handleConfirmationTimeout = () => {
+    console.log("Email confirmation timed out");
     Alert.alert(
       'Confirmation Expired',
       'Your email confirmation has expired. Please sign up again.',
@@ -175,7 +259,9 @@ const AuthScreen = () => {
           text: 'OK', 
           onPress: () => {
             setShowEmailConfirmation(false);
+            setActiveTab('signup');
             setPendingUserId(null);
+            resetForm();
           } 
         }
       ]
@@ -183,10 +269,14 @@ const AuthScreen = () => {
   };
   
   const handleResendEmail = async () => {
+    if (!email) {
+      Alert.alert('Error', 'Email address is missing');
+      return;
+    }
+    
     try {
-      if (!email) return;
-      
       setIsLoading(true);
+      console.log("Attempting to resend confirmation email to:", email);
       await resendConfirmationEmail(email);
       
       Alert.alert(
@@ -195,6 +285,7 @@ const AuthScreen = () => {
         [{ text: 'OK' }]
       );
     } catch (err: any) {
+      console.error("Error resending email:", err);
       Alert.alert(
         'Error',
         err.message || 'Failed to resend confirmation email',
@@ -214,6 +305,35 @@ const AuthScreen = () => {
     setParentUserData({});
     setTeacherUserData({});
     setError(null);
+  };
+
+  const getMissingFieldsMessage = () => {
+    if (isSignupFormValid) return null;
+    
+    const missing = [];
+    
+    if (!email) missing.push('email');
+    if (!password) missing.push('password');
+    if (!name) missing.push('name');
+    if (!selectedUserRole) missing.push('user type');
+    
+    if (selectedUserRole) {
+      switch (selectedUserRole) {
+        case 'deaf':
+          if (!deafUserData.proficiency) missing.push('proficiency level');
+          break;
+        case 'parent':
+          if (!parentUserData.relationship) missing.push('relationship to child');
+          break;
+        case 'teacher':
+          if (!teacherUserData.subjects || teacherUserData.subjects.length === 0) missing.push('subjects');
+          break;
+      }
+    }
+    
+    if (missing.length === 0) return null;
+    
+    return `Required: ${missing.join(', ')}`;
   };
 
   const renderLoginTab = () => (
@@ -423,21 +543,45 @@ const AuthScreen = () => {
       {/* Role-specific Form */}
       {renderRoleSpecificForm()}
       
-      {error && (
-        <Text style={[styles.errorText, { color: theme.error }]}>{error}</Text>
+      {/* Missing fields message */}
+      {!isSignupFormValid && !isLoading && (
+        <Text style={[styles.missingFieldsText, { color: theme.warning }]}>
+          {getMissingFieldsMessage()}
+        </Text>
       )}
       
-      <TouchableOpacity style={styles.authButton} onPress={handleSignup} disabled={isLoading}>
+      {error && (
+        <Text style={[styles.errorText, { color: theme.error }]}>
+          {error}
+        </Text>
+      )}
+      
+      <TouchableOpacity 
+        style={[
+          styles.authButton, 
+          !isSignupFormValid && styles.disabledButton
+        ]} 
+        onPress={handleSignup} 
+        disabled={isLoading || !isSignupFormValid}
+      >
         <LinearGradient
-          colors={theme.gradientPrimary}
+          colors={isSignupFormValid ? theme.gradientPrimary : [theme.disabledBackground, theme.disabledBackground]}
           style={styles.gradient}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
         >
           {isLoading ? (
-            <ActivityIndicator color="#FFFFFF" size="small" />
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator color="#FFFFFF" size="small" />
+              <Text style={[styles.authButtonText, styles.loadingText]}>Creating Account...</Text>
+            </View>
           ) : (
-            <Text style={styles.authButtonText}>Sign Up</Text>
+            <Text style={[
+              styles.authButtonText,
+              !isSignupFormValid && styles.disabledButtonText
+            ]}>
+              Sign Up
+            </Text>
           )}
         </LinearGradient>
       </TouchableOpacity>
@@ -445,11 +589,12 @@ const AuthScreen = () => {
   );
 
   // Show email confirmation screen if needed
-  if (showEmailConfirmation) {
+  if (showEmailConfirmation && pendingUserId) {
+    console.log("Showing email confirmation screen for user:", pendingUserId);
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
         <EmailConfirmation
-          userId={pendingUserId || ''}
+          userId={pendingUserId}
           email={email}
           onConfirmed={handleEmailConfirmed}
           onTimeout={handleConfirmationTimeout}
@@ -459,8 +604,72 @@ const AuthScreen = () => {
     );
   }
 
+  // Show connection error banner if needed
+  const renderConnectionError = () => {
+    if (!supabaseConnectionTested || !supabaseConnectionError) return null;
+    
+    return (
+      <View style={styles.connectionErrorContainer}>
+        <Icon name="wifi-off" size={20} color="#fff" />
+        <Text style={styles.connectionErrorText}>
+          {supabaseConnectionError.includes('network') || supabaseConnectionError.includes('internet')
+            ? 'Cannot connect to server. Please check your internet connection.'
+            : supabaseConnectionError}
+        </Text>
+        <TouchableOpacity style={styles.retryButton} onPress={handleRetryConnection}>
+          <Text style={styles.retryText}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
+  // Retry connection function
+  const handleRetryConnection = async () => {
+    try {
+      setIsLoading(true);
+      setSupabaseConnectionError(null);
+      
+      const result = await testSupabaseConnection();
+      if (!result.success) {
+        setSupabaseConnectionError(result.error || 'Unknown connection error');
+      } else {
+        setSupabaseConnectionError(null);
+      }
+      
+      setSupabaseConnectionTested(true);
+    } catch (err) {
+      setSupabaseConnectionError('Failed to connect to server');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+      {/* Network Status Bar */}
+      <NetworkStatusBar onRetry={handleRetryConnection} />
+      
+      {/* Theme Toggle Button - Top Right */}
+      <TouchableOpacity 
+        style={[
+          styles.themeToggle, 
+          styles.themeToggleTopRight,
+          { 
+            backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+            borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)'
+          }
+        ]} 
+        onPress={toggleTheme}
+      >
+        <Icon 
+          name={isDarkMode ? "white-balance-sunny" : "moon-waning-crescent"} 
+          size={20} 
+          color={theme.primary}
+        />
+      </TouchableOpacity>
+
+      {renderConnectionError()}
+
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.keyboardAvoidView}
@@ -483,18 +692,12 @@ const AuthScreen = () => {
           </View>
           
           {/* Auth Tabs */}
-          <View style={[
-            styles.tabContainer,
-            {backgroundColor: theme.cardBackground || 'rgba(240, 240, 255, 0.2)'}
-          ]}>
+          <View style={styles.tabContainer}>
             <TouchableOpacity
               style={[
                 styles.tab,
                 activeTab === 'login' && styles.activeTab,
-                { 
-                  borderBottomColor: activeTab === 'login' ? theme.primary : 'transparent',
-                  backgroundColor: activeTab === 'login' ? 'rgba(80, 50, 250, 0.1)' : 'transparent'
-                }
+                { borderBottomColor: activeTab === 'login' ? theme.primary : 'transparent' }
               ]}
               onPress={() => {
                 setActiveTab('login');
@@ -505,8 +708,7 @@ const AuthScreen = () => {
               <Text
                 style={[
                   styles.tabText,
-                  { color: activeTab === 'login' ? theme.primary : theme.textSecondary },
-                  activeTab === 'login' && styles.activeTabText
+                  { color: activeTab === 'login' ? theme.primary : theme.textSecondary }
                 ]}
               >
                 Login
@@ -517,10 +719,7 @@ const AuthScreen = () => {
               style={[
                 styles.tab,
                 activeTab === 'signup' && styles.activeTab,
-                { 
-                  borderBottomColor: activeTab === 'signup' ? theme.primary : 'transparent',
-                  backgroundColor: activeTab === 'signup' ? 'rgba(80, 50, 250, 0.1)' : 'transparent'
-                }
+                { borderBottomColor: activeTab === 'signup' ? theme.primary : 'transparent' }
               ]}
               onPress={() => {
                 setActiveTab('signup');
@@ -531,8 +730,7 @@ const AuthScreen = () => {
               <Text
                 style={[
                   styles.tabText,
-                  { color: activeTab === 'signup' ? theme.primary : theme.textSecondary },
-                  activeTab === 'signup' && styles.activeTabText
+                  { color: activeTab === 'signup' ? theme.primary : theme.textSecondary }
                 ]}
               >
                 Sign Up
@@ -541,21 +739,7 @@ const AuthScreen = () => {
           </View>
           
           {/* Form Body */}
-          <View style={[
-            styles.formContent,
-            {
-              backgroundColor: theme.cardBackground || 'rgba(255, 255, 255, 0.1)',
-              borderRadius: 15,
-              padding: 20,
-              paddingBottom: 30,
-              marginHorizontal: 20,
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 3 },
-              shadowOpacity: 0.1,
-              shadowRadius: 5,
-              elevation: 2
-            }
-          ]}>
+          <View style={styles.formContent}>
             {activeTab === 'login' ? renderLoginTab() : renderSignupTab()}
           </View>
         </ScrollView>
@@ -602,51 +786,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     marginHorizontal: 20,
     marginBottom: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 10,
-    padding: 5,
-    borderWidth: 1,
-    borderColor: 'rgba(150, 150, 255, 0.3)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
   },
   tab: {
     flex: 1,
     paddingVertical: 15,
     alignItems: 'center',
     borderBottomWidth: 2,
-    marginHorizontal: 5,
   },
   activeTab: {
     borderBottomWidth: 3,
-    backgroundColor: 'rgba(80, 50, 250, 0.15)',
-    borderRadius: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    elevation: 2,
   },
   tabText: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
   },
-  activeTabText: {
-    fontWeight: '700',
-    textShadowColor: 'rgba(0, 0, 0, 0.1)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
-  },
   formContent: {
-    paddingBottom: 20,
+    paddingHorizontal: 20,
   },
   formContainer: {
     width: '100%',
-    paddingBottom: 10,
-    marginBottom: 10,
   },
   inputContainer: {
     flexDirection: 'row',
@@ -735,6 +893,78 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
     textAlign: 'center',
+  },
+  themeToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    marginTop: 15,
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  themeToggleTopRight: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 50 : 20,
+    right: 20,
+    zIndex: 100,
+    marginTop: 0,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    paddingHorizontal: 0,
+  },
+  disabledButton: {
+    opacity: 0.6,
+  },
+  disabledButtonText: {
+    color: '#AAAAAA',
+  },
+  missingFieldsText: {
+    fontSize: 14,
+    marginBottom: 10,
+    marginTop: 5,
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    marginLeft: 10,
+  },
+  connectionErrorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FF3B30',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    marginHorizontal: 20,
+    borderRadius: 8,
+    marginBottom: 10,
+  },
+  connectionErrorText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    marginLeft: 8,
+    flex: 1,
+  },
+  retryButton: {
+    marginTop: 10,
+    padding: 10,
+    borderRadius: 5,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  retryText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: 'bold',
   },
 });
 

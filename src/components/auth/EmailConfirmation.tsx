@@ -1,15 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import LinearGradient from 'react-native-linear-gradient';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
+import { manuallyConfirmUserEmail } from '../../services/authService';
 
 interface EmailConfirmationProps {
   userId: string;
@@ -29,9 +31,15 @@ const EmailConfirmation: React.FC<EmailConfirmationProps> = ({
   const { theme } = useTheme();
   const { checkEmailConfirmationStatus } = useAuth();
   
-  const [timeLeft, setTimeLeft] = useState<number>(10 * 60); // 10 minutes in seconds
+  // 10 minutes in seconds (as requested)
+  const CONFIRMATION_TIMEOUT = 10 * 60; 
+  
+  const [timeLeft, setTimeLeft] = useState<number>(CONFIRMATION_TIMEOUT);
   const [checking, setChecking] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [checkCount, setCheckCount] = useState<number>(0);
+  const [isManuallyConfirming, setIsManuallyConfirming] = useState<boolean>(false);
+  const lastActionTimeRef = useRef<number>(0);
 
   // Format time as minutes:seconds
   const formatTime = (seconds: number) => {
@@ -42,28 +50,37 @@ const EmailConfirmation: React.FC<EmailConfirmationProps> = ({
 
   // Check confirmation status periodically
   useEffect(() => {
+    if (!userId) return;
+    
+    console.log("Starting email confirmation check for user:", userId);
+    
     const checkConfirmation = async () => {
+      // Increase check count
+      setCheckCount(prev => prev + 1);
+      
       try {
         setChecking(true);
         setError(null);
         
+        console.log(`Checking confirmation status (attempt ${checkCount + 1})...`);
         const status = await checkEmailConfirmationStatus(userId);
+        console.log("Confirmation status:", status);
         
         if (status.confirmed) {
-          // Email confirmed
+          console.log("Email confirmed successfully");
           onConfirmed();
           return;
         } else if (status.expired) {
-          // Confirmation period expired
+          console.log("Confirmation expired");
           onTimeout();
           return;
         } else if (status.minutesLeft !== undefined) {
-          // Update timer
+          // Update timer based on server response if available
           setTimeLeft(status.minutesLeft * 60);
         }
-      } catch (err) {
-        setError('Failed to check confirmation status');
-        console.error(err);
+      } catch (err: any) {
+        console.error("Error checking confirmation status:", err);
+        setError(`Failed to check status: ${err.message || 'Unknown error'}`);
       } finally {
         setChecking(false);
       }
@@ -72,14 +89,15 @@ const EmailConfirmation: React.FC<EmailConfirmationProps> = ({
     // Initial check
     checkConfirmation();
 
-    // Check every 30 seconds
-    const interval = setInterval(checkConfirmation, 30000);
+    // Check every 15 seconds
+    const interval = setInterval(checkConfirmation, 15000);
     
-    // Countdown timer
+    // Countdown timer (separate from server checks)
     const timer = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
           clearInterval(timer);
+          console.log("Timer expired, triggering timeout");
           onTimeout();
           return 0;
         }
@@ -88,27 +106,87 @@ const EmailConfirmation: React.FC<EmailConfirmationProps> = ({
     }, 1000);
 
     return () => {
+      console.log("Cleaning up email confirmation timers");
       clearInterval(interval);
       clearInterval(timer);
     };
   }, [userId, checkEmailConfirmationStatus, onConfirmed, onTimeout]);
 
-  // Handle manual refresh
+  // Handle manual refresh with debounce
   const handleRefresh = async () => {
+    // Debounce: prevent multiple rapid clicks
+    const now = Date.now();
+    if (now - lastActionTimeRef.current < 2000) {
+      console.log("Action debounced - preventing duplicate request");
+      return;
+    }
+    
+    if (checking || isManuallyConfirming) return;
+    
+    lastActionTimeRef.current = now;
+    
     try {
       setChecking(true);
       setError(null);
       
+      console.log("Manual confirmation check requested");
       const status = await checkEmailConfirmationStatus(userId);
       
       if (status.confirmed) {
+        console.log("Email confirmed on manual check");
         onConfirmed();
+        return; // Exit early if confirmed
       } else if (status.expired) {
+        console.log("Confirmation expired on manual check");
         onTimeout();
+        return; // Exit early if expired
+      } else {
+        // Ask user if they've clicked the confirmation link, but only if we're not in the middle of another confirmation
+        if (!isManuallyConfirming) {
+          Alert.alert(
+            'Email Confirmation',
+            'Have you clicked the confirmation link in the email?',
+            [
+              { 
+                text: 'No, Not Yet', 
+                style: 'cancel'
+              },
+              {
+                text: 'Yes, I Clicked It',
+                onPress: async () => {
+                  if (isManuallyConfirming) return; // Prevent duplicate confirmations
+                  
+                  try {
+                    // Try to manually confirm the user
+                    console.log("Attempting manual confirmation for user", userId);
+                    setIsManuallyConfirming(true);
+                    setChecking(true);
+                    
+                    const result = await manuallyConfirmUserEmail(userId);
+                    if (result.success) {
+                      console.log("Manual confirmation successful");
+                      // Don't show success alert, just redirect
+                      onConfirmed();
+                    }
+                  } catch (error: any) {
+                    console.error("Error in manual confirmation:", error);
+                    Alert.alert(
+                      'Confirmation Failed',
+                      error.message || 'An error occurred while confirming your email.'
+                    );
+                  } finally {
+                    setIsManuallyConfirming(false);
+                    setChecking(false);
+                  }
+                }
+              }
+            ]
+          );
+        }
       }
-    } catch (err) {
-      setError('Failed to check confirmation status');
-      console.error(err);
+    } catch (err: any) {
+      console.error("Error on manual confirmation check:", err);
+      setError(`Check failed: ${err.message || 'Unknown error'}`);
     } finally {
       setChecking(false);
     }
@@ -118,7 +196,28 @@ const EmailConfirmation: React.FC<EmailConfirmationProps> = ({
     <View style={styles.container}>
       <Icon name="email-check-outline" size={80} color={theme.primary} style={styles.icon} />
       
-      <Text style={[styles.title, { color: theme.text }]}>Check Your Email</Text>
+      <Text style={[styles.title, { color: theme.text }]}>Verify Your Email</Text>
+      
+      <View style={styles.statusContainer}>
+        <View style={styles.statusItem}>
+          <Icon name="check-circle" size={20} color={theme.success} />
+          <Text style={[styles.statusText, { color: theme.success }]}>Account created</Text>
+        </View>
+        
+        <View style={styles.statusDivider} />
+        
+        <View style={styles.statusItem}>
+          <Icon name="clock-outline" size={20} color={theme.warning} />
+          <Text style={[styles.statusText, { color: theme.warning }]}>Email verification pending</Text>
+        </View>
+        
+        <View style={styles.statusDivider} />
+        
+        <View style={styles.statusItem}>
+          <Icon name="account-check-outline" size={20} color={theme.textSecondary} />
+          <Text style={[styles.statusText, { color: theme.textSecondary }]}>Account activation</Text>
+        </View>
+      </View>
       
       <Text style={[styles.description, { color: theme.textSecondary }]}>
         We've sent a confirmation email to:
@@ -127,7 +226,7 @@ const EmailConfirmation: React.FC<EmailConfirmationProps> = ({
       <Text style={[styles.email, { color: theme.primary }]}>{email}</Text>
       
       <Text style={[styles.instruction, { color: theme.text }]}>
-        Please click the confirmation link in the email to verify your account.
+        Please click the confirmation link in the email to verify your account and complete the registration.
       </Text>
       
       <View style={styles.timerContainer}>
@@ -138,8 +237,8 @@ const EmailConfirmation: React.FC<EmailConfirmationProps> = ({
       </View>
       
       <Text style={[styles.note, { color: theme.textSecondary }]}>
-        Your account will be created only after email confirmation.
-        If not confirmed within 10 minutes, you'll need to sign up again.
+        Important: Your account will only be fully activated after email confirmation.
+        If not confirmed within 10 minutes, your signup data will be deleted and you'll need to register again.
       </Text>
       
       {error && (
@@ -156,13 +255,13 @@ const EmailConfirmation: React.FC<EmailConfirmationProps> = ({
             <ActivityIndicator size="small" color={theme.primary} />
           ) : (
             <Text style={[styles.refreshButtonText, { color: theme.primary }]}>
-              Check Confirmation Status
+              I've Confirmed My Email
             </Text>
           )}
         </TouchableOpacity>
         
         {onResendEmail && (
-          <TouchableOpacity style={styles.resendButton} onPress={onResendEmail}>
+          <TouchableOpacity style={styles.resendButton} onPress={onResendEmail} disabled={checking}>
             <LinearGradient
               colors={theme.gradientPrimary}
               style={styles.gradient}
@@ -174,6 +273,19 @@ const EmailConfirmation: React.FC<EmailConfirmationProps> = ({
           </TouchableOpacity>
         )}
       </View>
+      
+      <TouchableOpacity 
+        style={styles.helpLink} 
+        onPress={() => Alert.alert(
+          'Need Help?',
+          'Check your spam/junk folder if you don\'t see the email. Make sure your email address is correct. Try clicking the "Resend Email" button if needed.',
+          [{ text: 'OK' }]
+        )}
+      >
+        <Text style={[styles.helpLinkText, { color: theme.primary }]}>
+          Not receiving the email? Get help
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 };
@@ -190,7 +302,29 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 10,
+    marginBottom: 20,
+  },
+  statusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginBottom: 25,
+    paddingHorizontal: 10,
+  },
+  statusItem: {
+    alignItems: 'center',
+    width: '30%',
+  },
+  statusDivider: {
+    height: 1,
+    backgroundColor: '#ccc',
+    width: '5%',
+  },
+  statusText: {
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 5,
   },
   description: {
     fontSize: 16,
@@ -232,6 +366,7 @@ const styles = StyleSheet.create({
   buttonsContainer: {
     width: '100%',
     gap: 15,
+    marginBottom: 20,
   },
   button: {
     height: 50,
@@ -252,15 +387,23 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   gradient: {
-    flex: 1,
     width: '100%',
-    justifyContent: 'center',
+    height: '100%',
     alignItems: 'center',
+    justifyContent: 'center',
   },
   resendButtonText: {
     color: '#FFFFFF',
     fontWeight: 'bold',
     fontSize: 16,
+  },
+  helpLink: {
+    marginTop: 10,
+    padding: 10,
+  },
+  helpLinkText: {
+    fontSize: 14,
+    textDecorationLine: 'underline',
   },
 });
 

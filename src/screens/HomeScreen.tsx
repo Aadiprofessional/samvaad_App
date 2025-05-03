@@ -55,10 +55,22 @@ interface HomeScreenProps {
   navigation: NavigationProp<ParamListBase>;
 }
 
+// Default gradients to use as fallbacks
+const DEFAULT_GRADIENTS = {
+  play: ['#6a11cb', '#2575fc'],
+  learn: ['#00cdac', '#8ddad5'],
+  translate: ['#ff9966', '#ff5e62']
+};
+
 const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const { theme, isDarkMode } = useTheme();
   const scrollY = new Animated.Value(0);
   const [featuredIndex, setFeaturedIndex] = useState(0);
+  
+  // Safely get gradients with fallbacks
+  const getGradient = (type: 'play' | 'learn' | 'translate') => {
+    return theme?.colors?.gradients?.[type] || DEFAULT_GRADIENTS[type];
+  };
   
   // Header animation values
   const headerHeight = scrollY.interpolate({
@@ -100,7 +112,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       id: 1,
       title: 'Memory Match',
       image: require('../assets/images/placeholder-avatar.png'),
-      gradient: theme.colors.gradients.play,
+      gradient: getGradient('play'),
       level: 'Beginner',
       navigateTo: 'MemoryMatchGame',
     },
@@ -108,7 +120,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       id: 2,
       title: 'Sign Quiz',
       image: require('../assets/images/placeholder-avatar.png'),
-      gradient: theme.colors.gradients.play,
+      gradient: getGradient('play'),
       level: 'Intermediate',
       navigateTo: 'SignLanguageQuiz',
     },
@@ -116,7 +128,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       id: 3,
       title: 'Word Association',
       image: require('../assets/images/placeholder-avatar.png'),
-      gradient: theme.colors.gradients.play,
+      gradient: getGradient('play'),
       level: 'Advanced',
       navigateTo: 'WordAssociationGame',
     },
@@ -124,7 +136,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       id: 4,
       title: 'Story Time',
       image: require('../assets/images/placeholder-avatar.png'),
-      gradient: theme.colors.gradients.play,
+      gradient: getGradient('play'),
       level: 'Beginner',
       navigateTo: 'StoryTimeGame',
     },
@@ -137,7 +149,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       progress: 40,
       lessons: 12,
       image: require('../assets/images/placeholder-avatar.png'),
-      gradient: theme.colors.gradients.learn,
+      gradient: getGradient('learn'),
     },
     {
       id: 2,
@@ -145,7 +157,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       progress: 25,
       lessons: 18,
       image: require('../assets/images/placeholder-avatar.png'),
-      gradient: theme.colors.gradients.learn,
+      gradient: getGradient('learn'),
     },
     {
       id: 3,
@@ -153,7 +165,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       progress: 10,
       lessons: 24,
       image: require('../assets/images/placeholder-avatar.png'),
-      gradient: theme.colors.gradients.learn,
+      gradient: getGradient('learn'),
     },
   ];
   
@@ -165,7 +177,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       buttonText: 'Start Learning',
       icon: 'school',
       onPress: () => navigation.navigate('Study'),
-      gradient: theme.colors.gradients.learn,
+      gradient: getGradient('learn'),
     },
     {
       id: 2,
@@ -174,7 +186,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       buttonText: 'Play Now',
       icon: 'gamepad-variant',
       onPress: () => navigation.navigate('Games'),
-      gradient: theme.colors.gradients.play,
+      gradient: getGradient('play'),
     },
     {
       id: 3,
@@ -183,7 +195,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       buttonText: 'Try Now',
       icon: 'translate',
       onPress: () => navigation.navigate('Translator'),
-      gradient: theme.colors.gradients.translate,
+      gradient: getGradient('translate'),
     },
   ];
 

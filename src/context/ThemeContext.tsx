@@ -17,7 +17,7 @@ const THEME_PREFERENCE_KEY = '@samvaad_theme_preference';
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const systemColorScheme = useColorScheme();
-  const [themeMode, setThemeMode] = useState<'light' | 'dark' | 'system'>('system');
+  const [themeMode, setThemeMode] = useState<'light' | 'dark' | 'system'>('dark');
   const [isInitialized, setIsInitialized] = useState(false);
   
   // Calculate the effective theme based on preference or system setting

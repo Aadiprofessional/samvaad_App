@@ -22,6 +22,39 @@ interface CardProps extends TouchableOpacityProps {
   onPress?: () => void;
 }
 
+// Default border radius values in case theme is missing them
+const DEFAULT_BORDER_RADIUS = {
+  small: 4,
+  medium: 8,
+  large: 12,
+  none: 0
+};
+
+// Default shadow styles
+const DEFAULT_SHADOWS = {
+  small: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.18,
+    shadowRadius: 1.0,
+    elevation: 1,
+  },
+  medium: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 3,
+  },
+  large: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.30,
+    shadowRadius: 4.65,
+    elevation: 6,
+  }
+};
+
 const Card: React.FC<CardProps> = ({
   children,
   style,
@@ -35,19 +68,28 @@ const Card: React.FC<CardProps> = ({
 }) => {
   const { theme } = useTheme();
   
+  // Safely get border radius - use theme value or fallback to default
+  const getBorderRadius = (size: 'small' | 'medium' | 'large' | 'none') => {
+    if (size === 'none') return 0;
+    return theme?.borderRadius?.[size] || DEFAULT_BORDER_RADIUS[size] || DEFAULT_BORDER_RADIUS.medium;
+  };
+  
+  // Safely get shadow style - use theme value or fallback to default
+  const getShadowStyle = (size: 'small' | 'medium' | 'large') => {
+    return theme?.shadows?.[size] || DEFAULT_SHADOWS[size] || DEFAULT_SHADOWS.medium;
+  };
+  
   // Determine card styles based on props
   const cardStyles: StyleProp<ViewStyle> = [
     styles.card,
     {
-      borderRadius: rounded === 'none' 
-        ? 0 
-        : theme.borderRadius[rounded],
+      borderRadius: getBorderRadius(rounded),
       borderWidth: outlined ? 1 : 0,
-      borderColor: outlined ? theme.colors.border : 'transparent',
-      backgroundColor: gradient ? 'transparent' : theme.colors.card,
+      borderColor: outlined ? theme.border : 'transparent',
+      backgroundColor: gradient ? 'transparent' : theme.card,
       overflow: 'hidden',
     },
-    elevated && !gradient && !outlined ? theme.shadows.medium : {},
+    elevated && !gradient && !outlined ? getShadowStyle('medium') : {},
     style,
   ];
   
@@ -74,7 +116,7 @@ const Card: React.FC<CardProps> = ({
       <TouchableOpacity
         activeOpacity={0.8}
         onPress={onPress}
-        style={elevated ? theme.shadows.medium : {}}
+        style={elevated ? getShadowStyle('medium') : {}}
         {...props}
       >
         {cardContent}

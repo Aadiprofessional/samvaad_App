@@ -15,6 +15,7 @@ import { RootStackParamList } from '../types/navigation';
 import LinearGradient from 'react-native-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useTheme } from '../context/ThemeContext';
 
 const { width, height } = Dimensions.get('window');
 
@@ -55,6 +56,7 @@ const OnboardingScreen = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const scrollX = useRef(new Animated.Value(0)).current;
   const slidesRef = useRef<FlatList>(null);
+  const { theme, isDarkMode } = useTheme();
 
   const viewableItemsChanged = useRef(({ viewableItems }: any) => {
     setCurrentIndex(viewableItems[0].index);
@@ -86,18 +88,18 @@ const OnboardingScreen = () => {
           <Image source={item.image} style={styles.image} />
         </LinearGradient>
         <View style={styles.textContainer}>
-          <Text style={styles.title}>{item.title}</Text>
-          <Text style={styles.description}>{item.description}</Text>
+          <Text style={[styles.title, { color: theme.text }]}>{item.title}</Text>
+          <Text style={[styles.description, { color: theme.textSecondary }]}>{item.description}</Text>
         </View>
       </View>
     );
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={styles.header}>
         <TouchableOpacity onPress={skip} style={styles.skipButton}>
-          <Text style={styles.skipText}>Skip</Text>
+          <Text style={[styles.skipText, { color: theme.primary }]}>Skip</Text>
         </TouchableOpacity>
       </View>
 
@@ -148,7 +150,7 @@ const OnboardingScreen = () => {
                   { width: dotWidth, opacity },
                   {
                     backgroundColor:
-                      index === currentIndex ? '#6200EE' : '#C4C4C4',
+                      index === currentIndex ? theme.primary : (isDarkMode ? '#555555' : '#C4C4C4'),
                   },
                 ]}
               />
@@ -158,7 +160,7 @@ const OnboardingScreen = () => {
 
         <TouchableOpacity style={styles.button} onPress={scrollTo}>
           <LinearGradient
-            colors={['#6a11cb', '#2575fc']}
+            colors={theme.gradientPrimary}
             style={styles.gradient}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
@@ -177,7 +179,6 @@ const OnboardingScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
   },
   header: {
     flexDirection: 'row',

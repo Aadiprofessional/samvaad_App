@@ -33,70 +33,52 @@ export interface UserSignupData {
   childRollNumber?: string;
   relationship?: string;
   purpose?: string;
+  child_name?: string;
   
   // For teacher users
   subjects?: string[];
   teachingPurpose?: string;
+  school?: string;
 }
 
 // Sign up a new user
-export const signUp = async (userData: UserSignupData) => {
+export const signUp = async (userData: UserSignupData): Promise<any> => {
   try {
-    // Generate unique 6-digit roll number
-    const rollNumber = await generateUniqueId();
-    
-    // First, create auth user
-    const { data: authData, error: authError } = await supabase.auth.signUp({
+    // Direct simple signup call
+    const signupResponse = await supabase.auth.signUp({
       email: userData.email,
       password: userData.password,
       options: {
+        emailRedirectTo: 'samvaad://confirm-email',
         data: {
           name: userData.name,
-          role: userData.role,
-          rollNumber,
-        },
+          role: userData.role
+        }
       }
     });
-
-    if (authError) throw authError;
     
-    // Then, insert user profile data into the database
-    const { data, error } = await supabase
-      .from('users')
-      .insert({
-        id: authData.user?.id,
-        email: userData.email,
-        name: userData.name,
-        role: userData.role,
-        roll_number: rollNumber,
-        age: userData.age,
-        created_at: new Date(),
-        
-        // Role-specific data
-        proficiency: userData.proficiency,
-        issues: userData.issues,
-        illness_stage: userData.illnessStage,
-        child_roll_number: userData.childRollNumber,
-        relationship: userData.relationship,
-        purpose: userData.purpose,
-        subjects: userData.subjects,
-        teaching_purpose: userData.teachingPurpose,
-        
-        // Start with email unconfirmed
-        email_confirmed: false,
-        confirmation_sent_at: new Date(),
-      })
-      .select();
-      
-    if (error) throw error;
+    if (signupResponse.error) {
+      throw signupResponse.error;
+    }
     
-    return { 
-      user: authData.user, 
-      profile: data?.[0], 
-      rollNumber 
-    };
+    // Store user data in AsyncStorage
+    if (signupResponse.data?.user) {
+      try {
+        const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+        const userDataToStore = JSON.stringify({
+          ...userData,
+          id: signupResponse.data.user.id,
+          created_at: new Date().toISOString()
+        });
+        await AsyncStorage.setItem(`pending_user_${signupResponse.data.user.id}`, userDataToStore);
+      } catch (storageError) {
+        console.warn('Failed to store user data, but auth succeeded');
+      }
+    }
+    
+    return signupResponse.data;
   } catch (error) {
-    console.error('Error signing up:', error);
+    console.error('Error in signUp:', error);
     throw error;
   }
 };
@@ -104,28 +86,63 @@ export const signUp = async (userData: UserSignupData) => {
 // Sign in an existing user
 export const signIn = async (email: string, password: string) => {
   try {
-    const { data, error } = await supabase.auth.signInWithPassword({
+    console.log('Attempting to sign in user:', email);
+    
+    // Direct sign-in attempt without complex retry logic
+    const signInResponse = await supabase.auth.signInWithPassword({
       email,
       password,
     });
     
-    if (error) throw error;
+    // Handle auth errors
+    if (signInResponse.error) {
+      console.error('Error signing in:', signInResponse.error.message);
+      
+      // Provide specific error messages for common issues
+      if (signInResponse.error.message?.includes('Invalid login') || 
+          signInResponse.error.message?.includes('Invalid email') ||
+          signInResponse.error.message?.includes('Invalid password')) {
+        throw new Error('Invalid email or password. Please try again.');
+      } else if (signInResponse.error.message?.includes('network') || 
+                signInResponse.error.message?.includes('fetch')) {
+        throw new Error('Network error: Unable to connect to the server. Please check your internet connection.');
+      }
+      
+      throw signInResponse.error;
+    }
+    
+    console.log('Sign in successful, getting user profile');
     
     // Get user profile
-    const { data: profile, error: profileError } = await supabase
+    const profileResponse = await supabase
       .from('users')
       .select('*')
-      .eq('id', data.user.id)
+      .eq('id', signInResponse.data.user.id)
       .single();
       
-    if (profileError) throw profileError;
+    if (profileResponse.error && profileResponse.error.code !== 'PGRST116') {
+      console.error('Error fetching profile:', profileResponse.error);
+      throw profileResponse.error;
+    }
     
     return { 
-      user: data.user, 
-      profile 
+      user: signInResponse.data.user, 
+      profile: profileResponse.data 
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error signing in:', error);
+    
+    // Provide helpful error messages
+    if (error.message?.includes('network') || error.code === 'NETWORK_ERROR' || error.message?.includes('fetch')) {
+      throw new Error('Network error: Unable to connect to the server. Please check your internet connection.');
+    } else if (error.message?.includes('Invalid login credentials')) {
+      throw new Error('Invalid email or password. Please try again.');
+    } else if (error.status === 429 || error.message?.includes('too many requests')) {
+      throw new Error('Too many login attempts. Please try again later.');
+    } else if (error.message?.includes('timeout')) {
+      throw new Error('The request timed out. Please check your internet connection and try again.');
+    }
+    
     throw error;
   }
 };
@@ -187,22 +204,61 @@ export const getCurrentUser = async () => {
 export const confirmEmail = async (token: string) => {
   try {
     // Get user from token
-    const { data: { user }, error } = await supabase.auth.getUser(token);
+    const userResponse = await supabase.auth.getUser(token);
     
-    if (error || !user) throw error || new Error('Invalid token');
+    if (userResponse.error || !userResponse.data.user) {
+      throw userResponse.error || new Error('Invalid token');
+    }
     
-    // Update user profile to mark email as confirmed
-    const { error: updateError } = await supabase
+    const user = userResponse.data.user;
+    
+    // Generate a simple roll number
+    const rollNumber = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    // Get stored user data
+    let userData = null;
+    const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+    const storedData = await AsyncStorage.getItem(`pending_user_${user.id}`);
+    if (storedData) {
+      userData = JSON.parse(storedData);
+    }
+    
+    // Create basic profile data
+    const profileData: any = {
+      id: user.id,
+      email: user.email,
+      name: user.user_metadata?.name || (userData?.name || 'User'),
+      role: user.user_metadata?.role || (userData?.role || 'deaf'),
+      roll_number: rollNumber,
+      email_confirmed: true,
+      email_confirmed_at: new Date(),
+      created_at: new Date()
+    };
+    
+    // Add role-specific data if available
+    if (userData?.role === 'deaf' && userData.proficiency) {
+      profileData.proficiency = userData.proficiency;
+    } else if (userData?.role === 'parent' && userData.relationship) {
+      profileData.relationship = userData.relationship;
+      profileData.child_name = userData.child_name;
+    } else if (userData?.role === 'teacher' && userData.subjects) {
+      profileData.subjects = userData.subjects;
+      profileData.school = userData.school;
+    }
+    
+    // Create user profile
+    const { error: profileError } = await supabase
       .from('users')
-      .update({ 
-        email_confirmed: true,
-        email_confirmed_at: new Date()
-      })
-      .eq('id', user.id);
-      
-    if (updateError) throw updateError;
+      .upsert([profileData]);
     
-    return true;
+    if (profileError) {
+      throw profileError;
+    }
+    
+    // Clean up stored data
+    await AsyncStorage.removeItem(`pending_user_${user.id}`);
+    
+    return { success: true, user, profile: profileData };
   } catch (error) {
     console.error('Error confirming email:', error);
     throw error;
@@ -256,60 +312,106 @@ export const connectParentChild = async (parentId: string, childRollNumber: stri
   }
 };
 
-// Check if email confirmation has expired or been completed
+// Check email confirmation status
 export const checkEmailConfirmationStatus = async (userId: string) => {
   try {
-    const { data, error } = await supabase
+    if (!userId) {
+      console.error("checkEmailConfirmationStatus called with invalid userId");
+      return { confirmed: false, expired: true };
+    }
+    
+    console.log(`Checking confirmation status for user ${userId}`);
+    
+    // Get user profile - use admin client for proper permissions
+    const { data, error } = await supabaseAdmin
       .from('users')
       .select('email_confirmed, confirmation_sent_at')
       .eq('id', userId)
       .single();
       
-    if (error) throw error;
-    
-    // Check if already confirmed
-    if (data.email_confirmed) {
-      return { confirmed: true, expired: false };
+    if (error) {
+      console.error("Database error checking confirmation status:", error);
+      throw error;
     }
     
-    // Check if expired (10 minute window)
-    const sentTime = new Date(data.confirmation_sent_at).getTime();
-    const currentTime = new Date().getTime();
-    const timeDiffMinutes = (currentTime - sentTime) / (1000 * 60);
-    
-    if (timeDiffMinutes > 10) {
+    if (!data) {
+      console.log("User not found in database, marking as expired");
       return { confirmed: false, expired: true };
     }
     
-    // Still valid
-    const minutesLeft = Math.max(0, 10 - Math.floor(timeDiffMinutes));
-    return { confirmed: false, expired: false, minutesLeft };
+    // If already confirmed
+    if (data.email_confirmed) {
+      console.log("User email already confirmed");
+      return { confirmed: true };
+    }
+    
+    // Check if confirmation_sent_at exists and is valid
+    if (!data.confirmation_sent_at) {
+      console.log("No confirmation_sent_at timestamp found, using current time minus 5 minutes");
+      // If missing, assume it was sent 5 minutes ago to allow some time for confirmation
+      data.confirmation_sent_at = new Date(new Date().getTime() - 5 * 60 * 1000).toISOString();
+    }
+    
+    // Check if confirmation period has expired (10 minutes)
+    let confirmationSentAt;
+    try {
+      confirmationSentAt = new Date(data.confirmation_sent_at);
+      if (isNaN(confirmationSentAt.getTime())) {
+        throw new Error('Invalid date');
+      }
+    } catch (err) {
+      console.log("Invalid confirmation_sent_at date, using current time minus 5 minutes");
+      confirmationSentAt = new Date(new Date().getTime() - 5 * 60 * 1000);
+    }
+    
+    const now = new Date();
+    const diffMinutes = (now.getTime() - confirmationSentAt.getTime()) / (1000 * 60);
+    
+    console.log(`Time elapsed since confirmation sent: ${diffMinutes.toFixed(2)} minutes`);
+    
+    if (diffMinutes > 10) {
+      console.log("Confirmation period expired, deleting unconfirmed user");
+      // Expired - delete the unconfirmed user
+      try {
+        await deleteUnconfirmedUser(userId);
+      } catch (err) {
+        console.error("Failed to delete unconfirmed user:", err);
+        // Continue even if deletion fails
+      }
+      return { confirmed: false, expired: true };
+    }
+    
+    // Still within confirmation period
+    const minutesLeft = Math.max(0, 10 - diffMinutes);
+    console.log(`Minutes remaining for confirmation: ${minutesLeft.toFixed(2)}`);
+    
+    return { 
+      confirmed: false, 
+      expired: false,
+      minutesLeft: Math.floor(minutesLeft)
+    };
   } catch (error) {
     console.error('Error checking email confirmation status:', error);
     throw error;
   }
 };
 
-// Delete unconfirmed user after timeout
+// Delete unconfirmed user
 export const deleteUnconfirmedUser = async (userId: string) => {
   try {
-    // Check if email is still unconfirmed
-    const { data, error } = await supabase
+    // First delete from users table
+    const { error: dbError } = await supabase
       .from('users')
-      .select('email_confirmed')
-      .eq('id', userId)
-      .single();
+      .delete()
+      .eq('id', userId);
       
-    if (error) throw error;
+    if (dbError) throw dbError;
     
-    // If already confirmed, don't delete
-    if (data.email_confirmed) {
-      return false;
-    }
+    // Then delete from auth
+    // Note: This requires admin privileges, might need to be handled by a server function
+    const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(userId);
     
-    // Delete the user from auth and cascades to profile due to FK constraints
-    const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(userId);
-    if (deleteError) throw deleteError;
+    if (authError) throw authError;
     
     return true;
   } catch (error) {
@@ -361,6 +463,122 @@ export const getUserByRollNumber = async (rollNumber: string) => {
     return data;
   } catch (error) {
     console.error('Error getting user by roll number:', error);
+    throw error;
+  }
+};
+
+// Manually mark a user's email as confirmed
+export const manuallyConfirmUserEmail = async (userId: string) => {
+  try {
+    console.log(`Manually confirming email for user ${userId}`);
+    
+    // Get user info first
+    const userResponse = await supabaseAdmin.auth.admin.getUserById(userId);
+    
+    if (userResponse.error || !userResponse.data.user) {
+      console.error("Error getting user data:", userResponse.error);
+      throw userResponse.error || new Error('User not found');
+    }
+    
+    const user = userResponse.data.user;
+    
+    // Generate a roll number (if not already present)
+    const rollNumber = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    // Get stored user data from AsyncStorage
+    let userData = null;
+    try {
+      const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+      const storedData = await AsyncStorage.getItem(`pending_user_${userId}`);
+      if (storedData) {
+        userData = JSON.parse(storedData);
+        console.log("Found stored user data:", userData);
+      }
+    } catch (storageErr) {
+      console.warn("Error retrieving stored user data:", storageErr);
+    }
+    
+    // Check if user already exists in the users table
+    const { data: existingUser } = await supabaseAdmin
+      .from('users')
+      .select('*')
+      .eq('id', userId)
+      .single();
+    
+    if (existingUser) {
+      console.log("User already exists in database, updating confirmation status");
+      
+      // Just update the confirmation status
+      const { error } = await supabaseAdmin
+        .from('users')
+        .update({
+          email_confirmed: true,
+          email_confirmed_at: new Date().toISOString()
+        })
+        .eq('id', userId);
+        
+      if (error) {
+        console.error("Error updating user confirmation status:", error);
+        throw error;
+      }
+    } else {
+      console.log("User not found in database, creating profile");
+      
+      // Create basic profile data
+      const profileData: any = {
+        id: userId,
+        email: user.email,
+        name: user.user_metadata?.name || (userData?.name || 'User'),
+        role: user.user_metadata?.role || (userData?.role || 'deaf'),
+        roll_number: rollNumber,
+        email_confirmed: true,
+        email_confirmed_at: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        confirmation_sent_at: new Date().toISOString()
+      };
+      
+      // Add role-specific data if available from the stored data
+      if (userData) {
+        if (userData.role === 'deaf') {
+          profileData.proficiency = userData.proficiency;
+          profileData.issues = userData.issues;
+          profileData.illness_stage = userData.illnessStage;
+          profileData.age = userData.age;
+        } else if (userData.role === 'parent') {
+          profileData.relationship = userData.relationship;
+          profileData.child_name = userData.child_name;
+          profileData.child_roll_number = userData.childRollNumber;
+          profileData.purpose = userData.purpose;
+        } else if (userData.role === 'teacher') {
+          profileData.subjects = userData.subjects;
+          profileData.teaching_purpose = userData.teachingPurpose;
+          profileData.school = userData.school;
+        }
+      }
+      
+      // Create user profile
+      const { error } = await supabaseAdmin
+        .from('users')
+        .upsert([profileData]);
+      
+      if (error) {
+        console.error("Error creating user profile:", error);
+        throw error;
+      }
+      
+      // Clean up stored data
+      try {
+        const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+        await AsyncStorage.removeItem(`pending_user_${userId}`);
+      } catch (storageErr) {
+        console.warn("Error cleaning up stored user data:", storageErr);
+      }
+    }
+    
+    console.log(`User ${userId} email manually confirmed`);
+    return { success: true };
+  } catch (error) {
+    console.error('Error in manual confirmation:', error);
     throw error;
   }
 }; 
