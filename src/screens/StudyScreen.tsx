@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useLayoutEffect } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import LinearGradient from 'react-native-linear-gradient';
 import { StudyScreenProps } from '../types/navigation';
 import { useTheme } from '../context/ThemeContext';
+import { useIsFocused } from '@react-navigation/native';
 
 type TabsType = 'courses' | 'tests' | 'certificates';
 
@@ -192,6 +193,21 @@ const StudyScreen = ({ navigation }: StudyScreenProps) => {
   const { width } = useWindowDimensions();
   const [activeTab, setActiveTab] = useState<TabsType>('courses');
   const { theme, isDarkMode } = useTheme();
+  const isFocused = useIsFocused();
+  
+  useLayoutEffect(() => {
+    if (isFocused) {
+      navigation.getParent()?.setOptions({
+        tabBarStyle: { display: 'flex' }
+      });
+    }
+    
+    return () => {
+      navigation.getParent()?.setOptions({
+        tabBarStyle: undefined
+      });
+    };
+  }, [navigation, isFocused]);
 
   const renderCourseItem = ({ item }: { item: CourseType }) => (
     <TouchableOpacity
@@ -199,35 +215,44 @@ const StudyScreen = ({ navigation }: StudyScreenProps) => {
       onPress={() => navigation.navigate('LectureDetail', { courseId: item.id })}
       activeOpacity={0.9}
     >
-      <LinearGradient
-        colors={[item.color1, item.color2]}
-        style={styles.courseCardGradient}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      >
+      <View style={[styles.courseCardContainer, { backgroundColor: isDarkMode ? '#333333' : '#FFFFFF' }]}>
+        <LinearGradient
+          colors={[item.color1, item.color2]}
+          style={styles.courseCardGradientStrip}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+        />
         <View style={styles.courseCardContent}>
           <View>
-            <Text style={styles.courseCardLevel}>{item.level.toUpperCase()}</Text>
-            <Text style={styles.courseCardTitle} numberOfLines={2} ellipsizeMode="tail">{item.title}</Text>
+            <Text style={[styles.courseCardLevel, { color: item.color1 }]}>{item.level.toUpperCase()}</Text>
+            <Text style={[styles.courseCardTitle, { color: isDarkMode ? '#FFFFFF' : '#333333' }]} numberOfLines={2} ellipsizeMode="tail">
+              {item.title}
+            </Text>
             <View style={styles.courseCardDetails}>
               <View style={styles.courseCardDetail}>
-                <Icon name="book-open-variant" size={14} color="#FFFFFF" />
-                <Text style={styles.courseCardDetailText}>{item.lessons} Lessons</Text>
+                <Icon name="book-open-variant" size={14} color={isDarkMode ? "#CCCCCC" : "#666666"} />
+                <Text style={[styles.courseCardDetailText, { color: isDarkMode ? "#CCCCCC" : "#666666" }]}>
+                  {item.lessons} Lessons
+                </Text>
               </View>
               <View style={styles.courseCardDetail}>
-                <Icon name="clock-outline" size={14} color="#FFFFFF" />
-                <Text style={styles.courseCardDetailText}>{item.duration}</Text>
+                <Icon name="clock-outline" size={14} color={isDarkMode ? "#CCCCCC" : "#666666"} />
+                <Text style={[styles.courseCardDetailText, { color: isDarkMode ? "#CCCCCC" : "#666666" }]}>
+                  {item.duration}
+                </Text>
               </View>
             </View>
           </View>
           <View style={styles.courseCardProgress}>
-            <Text style={styles.courseCardProgressText}>{item.progress}%</Text>
-            <View style={styles.courseCardProgressBar}>
-              <View style={[styles.courseCardProgressFill, { width: `${item.progress}%` }]} />
+            <Text style={[styles.courseCardProgressText, { color: isDarkMode ? '#FFFFFF' : '#333333' }]}>
+              {item.progress}%
+            </Text>
+            <View style={[styles.courseCardProgressBar, { backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)' }]}>
+              <View style={[styles.courseCardProgressFill, { width: `${item.progress}%`, backgroundColor: item.color1 }]} />
             </View>
           </View>
         </View>
-      </LinearGradient>
+      </View>
     </TouchableOpacity>
   );
 
@@ -237,35 +262,47 @@ const StudyScreen = ({ navigation }: StudyScreenProps) => {
       onPress={() => navigation.navigate('TestDetail', { testId: item.id })}
       activeOpacity={0.9}
     >
-      <LinearGradient
-        colors={[item.color1, item.color2]}
-        style={styles.testCardGradient}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      >
-        <View style={styles.testCardHeader}>
-          <Text style={styles.testCardTitle} numberOfLines={2} ellipsizeMode="tail">{item.title}</Text>
-          <View style={[styles.testCardBadge, { backgroundColor: item.completed ? '#4CAF50' : '#FF9800' }]}>
-            <Text style={styles.testCardBadgeText}>
-              {item.completed ? 'Completed' : 'Available'}
+      <View style={[styles.testCardContainer, { backgroundColor: isDarkMode ? '#333333' : '#FFFFFF' }]}>
+        <LinearGradient
+          colors={[item.color1, item.color2]}
+          style={styles.testCardGradientStrip}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+        />
+        <View style={styles.testCardContent}>
+          <View style={styles.testCardHeader}>
+            <Text style={[styles.testCardTitle, { color: isDarkMode ? '#FFFFFF' : '#333333' }]} numberOfLines={2} ellipsizeMode="tail">
+              {item.title}
             </Text>
+            <View style={[styles.testCardBadge, { backgroundColor: item.completed ? '#4CAF50' : '#FF9800' }]}>
+              <Text style={styles.testCardBadgeText}>
+                {item.completed ? 'Completed' : 'Available'}
+              </Text>
+            </View>
+          </View>
+          
+          <View style={styles.testCardDetails}>
+            <View style={styles.testCardDetail}>
+              <Icon name="help-circle-outline" size={14} color={isDarkMode ? "#CCCCCC" : "#666666"} />
+              <Text style={[styles.testCardDetailText, { color: isDarkMode ? "#CCCCCC" : "#666666" }]}>
+                {item.questions} Questions
+              </Text>
+            </View>
+            <View style={styles.testCardDetail}>
+              <Icon name="clock-outline" size={14} color={isDarkMode ? "#CCCCCC" : "#666666"} />
+              <Text style={[styles.testCardDetailText, { color: isDarkMode ? "#CCCCCC" : "#666666" }]}>
+                {item.duration}
+              </Text>
+            </View>
+            <View style={styles.testCardDetail}>
+              <Icon name="signal-cellular-outline" size={14} color={isDarkMode ? "#CCCCCC" : "#666666"} />
+              <Text style={[styles.testCardDetailText, { color: isDarkMode ? "#CCCCCC" : "#666666" }]}>
+                {item.level}
+              </Text>
+            </View>
           </View>
         </View>
-        <View style={styles.testCardDetails}>
-          <View style={styles.testCardDetail}>
-            <Icon name="help-circle-outline" size={14} color="#FFFFFF" />
-            <Text style={styles.testCardDetailText}>{item.questions} Questions</Text>
-          </View>
-          <View style={styles.testCardDetail}>
-            <Icon name="clock-outline" size={14} color="#FFFFFF" />
-            <Text style={styles.testCardDetailText}>{item.duration}</Text>
-          </View>
-          <View style={styles.testCardDetail}>
-            <Icon name="signal-cellular-outline" size={14} color="#FFFFFF" />
-            <Text style={styles.testCardDetailText}>{item.level}</Text>
-          </View>
-        </View>
-      </LinearGradient>
+      </View>
     </TouchableOpacity>
   );
 
@@ -275,30 +312,41 @@ const StudyScreen = ({ navigation }: StudyScreenProps) => {
       onPress={() => {}}
       activeOpacity={0.9}
     >
-      <LinearGradient
-        colors={[item.color1, item.color2]}
-        style={styles.certificateCardGradient}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      >
+      <View style={[styles.certificateCardContainer, { backgroundColor: isDarkMode ? '#333333' : '#FFFFFF' }]}>
+        <LinearGradient
+          colors={[item.color1, item.color2]}
+          style={styles.certificateCardGradientStrip}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+        />
         <View style={styles.certificateCardContent}>
-          <Icon name="certificate" size={30} color="#FFFFFF" style={styles.certificateIcon} />
-          <Text style={styles.certificateTitle} numberOfLines={2} ellipsizeMode="tail">{item.title}</Text>
-          <Text style={styles.certificateDate}>
+          <Icon name="certificate" size={30} color={item.color1} style={styles.certificateIcon} />
+          <Text style={[styles.certificateTitle, { color: isDarkMode ? '#FFFFFF' : '#333333' }]} numberOfLines={2} ellipsizeMode="tail">
+            {item.title}
+          </Text>
+          <Text style={[styles.certificateDate, { color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.6)' }]}>
             {item.progress === 100 ? `Issued: ${item.issueDate}` : 'In Progress'}
           </Text>
           {item.progress < 100 && (
             <View style={styles.certificateProgress}>
               <View style={styles.certificateProgressBar}>
                 <View
-                  style={[styles.certificateProgressFill, { width: `${item.progress}%` }]}
+                  style={[
+                    styles.certificateProgressFill, 
+                    { width: `${item.progress}%`, backgroundColor: item.color1 }
+                  ]}
                 />
               </View>
-              <Text style={styles.certificateProgressText}>{item.progress}% Complete</Text>
+              <Text style={[
+                styles.certificateProgressText, 
+                { color: isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.6)' }
+              ]}>
+                {item.progress}% Complete
+              </Text>
             </View>
           )}
         </View>
-      </LinearGradient>
+      </View>
     </TouchableOpacity>
   );
 
@@ -327,29 +375,27 @@ const StudyScreen = ({ navigation }: StudyScreenProps) => {
       </View>
 
       <View style={styles.featuredSection}>
-        <ImageBackground
-          source={require('../assets/images/placeholder-avatar.png')}
-          style={[styles.featuredCourse, { width: width - 40 }]}
-          imageStyle={{ borderRadius: 15 }}
-        >
-          <LinearGradient
-            colors={['rgba(0,0,0,0.1)', 'rgba(0,0,0,0.7)']}
-            style={styles.featuredGradient}
-          >
-            <View style={styles.featuredContent}>
-              <View style={[styles.featuredBadge, { backgroundColor: theme.colors.primary }]}>
-                <Text style={styles.featuredBadgeText}>NEW COURSE</Text>
-              </View>
-              <Text style={styles.featuredTitle} numberOfLines={2} ellipsizeMode="tail">Master Sign Language in 12 Weeks</Text>
-              <Text style={styles.featuredDescription}>
-                A comprehensive course for all skill levels
-              </Text>
-              <TouchableOpacity style={styles.featuredButton}>
-                <Text style={[styles.featuredButtonText, { color: theme.colors.primary }]}>Enroll Now</Text>
-              </TouchableOpacity>
+        <View style={[styles.featuredCard, { backgroundColor: theme.colors.primary }]}>
+          <View style={styles.featuredContent}>
+            <View style={[styles.featuredBadge, { backgroundColor: isDarkMode ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.2)' }]}>
+              <Text style={styles.featuredBadgeText}>NEW COURSE</Text>
             </View>
-          </LinearGradient>
-        </ImageBackground>
+            
+            <Text style={styles.featuredTitle} numberOfLines={2} ellipsizeMode="tail">
+              Master Sign Language in 12 Weeks
+            </Text>
+            
+            <Text style={styles.featuredDescription} numberOfLines={2} ellipsizeMode="tail">
+              A comprehensive course for all skill levels
+            </Text>
+            
+            <TouchableOpacity style={styles.featuredButton}>
+              <Text style={styles.featuredButtonText}>
+                Enroll Now
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </View>
 
       <View style={[styles.tabsContainer, { borderBottomColor: isDarkMode ? '#333333' : '#EEEEEE' }]}>
@@ -456,55 +502,62 @@ const styles = StyleSheet.create({
   },
   featuredSection: {
     paddingHorizontal: 20,
-    marginBottom: 20,
+    marginBottom: 25,
   },
-  featuredCourse: {
-    height: 180,
-    borderRadius: 15,
+  featuredCard: {
+    height: 220,
+    borderRadius: 16,
     overflow: 'hidden',
-  },
-  featuredGradient: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    padding: 20,
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5,
   },
   featuredContent: {
-    width: '100%',
+    flex: 1,
+    justifyContent: 'space-between',
   },
   featuredBadge: {
     alignSelf: 'flex-start',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
     marginBottom: 10,
   },
   featuredBadgeText: {
     color: '#FFFFFF',
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: 'bold',
   },
   featuredTitle: {
-    fontSize: 22,
+    fontSize: 26,
     fontWeight: 'bold',
     color: '#FFFFFF',
-    marginBottom: 5,
+    marginBottom: 8,
+    lineHeight: 32,
     maxWidth: '90%',
   },
   featuredDescription: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.8)',
-    marginBottom: 15,
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.9)',
+    marginBottom: 20,
+    maxWidth: '90%',
   },
   featuredButton: {
-    backgroundColor: '#FFFFFF',
     alignSelf: 'flex-start',
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    borderRadius: 20,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 30,
+    backgroundColor: '#FFFFFF',
+    marginTop: -15,
   },
   featuredButtonText: {
     fontWeight: 'bold',
-    fontSize: 14,
+    fontSize: 16,
+    color: '#6200EE',
   },
   tabsContainer: {
     flexDirection: 'row',
@@ -545,22 +598,25 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 5,
   },
-  courseCardGradient: {
-    padding: 15,
+  courseCardContainer: {
+    borderRadius: 15,
+    overflow: 'hidden',
+  },
+  courseCardGradientStrip: {
+    height: 8,
+    width: '100%',
   },
   courseCardContent: {
-    justifyContent: 'space-between',
+    padding: 15,
   },
   courseCardLevel: {
     fontSize: 12,
     fontWeight: 'bold',
-    color: 'rgba(255, 255, 255, 0.7)',
     marginBottom: 5,
   },
   courseCardTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#FFFFFF',
     marginBottom: 10,
     maxWidth: '90%',
   },
@@ -575,7 +631,6 @@ const styles = StyleSheet.create({
   },
   courseCardDetailText: {
     fontSize: 12,
-    color: '#FFFFFF',
     marginLeft: 5,
   },
   courseCardProgress: {
@@ -583,18 +638,15 @@ const styles = StyleSheet.create({
   },
   courseCardProgressText: {
     fontSize: 12,
-    color: '#FFFFFF',
     textAlign: 'right',
     marginBottom: 5,
   },
   courseCardProgressBar: {
     height: 5,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
     borderRadius: 3,
   },
   courseCardProgressFill: {
     height: '100%',
-    backgroundColor: '#FFFFFF',
     borderRadius: 3,
   },
   testCard: {
@@ -610,19 +662,27 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 5,
   },
-  testCardGradient: {
-    padding: 15,
+  testCardContainer: {
+    borderRadius: 15,
+    overflow: 'hidden',
+  },
+  testCardGradientStrip: {
+    height: 8,
+    width: '100%',
+  },
+  testCardContent: {
+    padding: 16,
   },
   testCardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: 15,
+    width: '100%',
   },
   testCardTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#FFFFFF',
     width: '70%',
     maxWidth: '70%',
   },
@@ -639,6 +699,7 @@ const styles = StyleSheet.create({
   testCardDetails: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    width: '100%',
   },
   testCardDetail: {
     flexDirection: 'row',
@@ -648,7 +709,6 @@ const styles = StyleSheet.create({
   },
   testCardDetailText: {
     fontSize: 12,
-    color: '#FFFFFF',
     marginLeft: 5,
   },
   certificateCard: {
@@ -664,10 +724,16 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 5,
   },
-  certificateCardGradient: {
-    padding: 20,
+  certificateCardContainer: {
+    borderRadius: 15,
+    overflow: 'hidden',
+  },
+  certificateCardGradientStrip: {
+    height: 8,
+    width: '100%',
   },
   certificateCardContent: {
+    padding: 20,
     alignItems: 'center',
   },
   certificateIcon: {
@@ -676,14 +742,12 @@ const styles = StyleSheet.create({
   certificateTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#FFFFFF',
     textAlign: 'center',
     marginBottom: 5,
     maxWidth: '95%',
   },
   certificateDate: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.8)',
     marginBottom: 15,
   },
   certificateProgress: {
@@ -691,18 +755,16 @@ const styles = StyleSheet.create({
   },
   certificateProgressBar: {
     height: 5,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    backgroundColor: 'rgba(0, 0, 0, 0.1)',
     borderRadius: 3,
     marginBottom: 5,
   },
   certificateProgressFill: {
     height: '100%',
-    backgroundColor: '#FFFFFF',
     borderRadius: 3,
   },
   certificateProgressText: {
     fontSize: 12,
-    color: '#FFFFFF',
     textAlign: 'center',
   },
 });

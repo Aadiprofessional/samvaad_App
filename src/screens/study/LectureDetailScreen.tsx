@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useLayoutEffect } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import LinearGradient from 'react-native-linear-gradient';
 import { LectureDetailScreenProps } from '../../types/navigation';
+import { useTheme } from '../../context/ThemeContext';
+import { useIsFocused } from '@react-navigation/native';
 
 type LessonType = {
   id: number;
@@ -101,6 +103,29 @@ type TabsType = 'lessons' | 'details' | 'reviews';
 const LectureDetailScreen = ({ route, navigation }: LectureDetailScreenProps) => {
   const { courseId } = route.params;
   const [activeTab, setActiveTab] = useState<TabsType>('lessons');
+  const { theme, isDarkMode } = useTheme();
+  const isFocused = useIsFocused();
+  
+  // Updated code to hide the bottom tab when viewing lecture detail
+  useLayoutEffect(() => {
+    if (isFocused) {
+      navigation.getParent()?.setOptions({
+        tabBarStyle: { display: 'none' }
+      });
+    }
+    
+    return () => {
+      if (!isFocused) {
+        navigation.getParent()?.setOptions({
+          tabBarStyle: { 
+            display: 'flex',
+            backgroundColor: isDarkMode ? '#1E1E1E' : '#FFFFFF',
+            borderTopColor: isDarkMode ? '#333333' : '#EEEEEE' 
+          }
+        });
+      }
+    };
+  }, [navigation, isFocused, isDarkMode]);
   
   // In a real app, we would fetch the course data based on courseId
   // For now, we're using the sample data
@@ -109,6 +134,7 @@ const LectureDetailScreen = ({ route, navigation }: LectureDetailScreenProps) =>
     <TouchableOpacity 
       style={[
         styles.lessonItem, 
+        { backgroundColor: isDarkMode ? '#1E1E1E' : '#FFFFFF' },
         item.isLocked && styles.lockedLesson
       ]}
       disabled={item.isLocked}
@@ -122,29 +148,40 @@ const LectureDetailScreen = ({ route, navigation }: LectureDetailScreenProps) =>
           ) : (
             <View style={[
               styles.lessonNumber, 
+              { backgroundColor: isDarkMode ? '#333333' : '#F0E6FF' },
               item.isLocked && styles.lockedNumber
             ]}>
-              <Text style={styles.lessonNumberText}>{item.id}</Text>
+              <Text style={[
+                styles.lessonNumberText,
+                { color: item.isLocked ? '#AAAAAA' : theme.colors.primary }
+              ]}>{item.id}</Text>
             </View>
           )}
           <View>
             <Text style={[
               styles.lessonTitle,
-              item.isLocked && styles.lockedText
+              { color: isDarkMode ? '#FFFFFF' : '#333333' },
+              item.isLocked && { color: isDarkMode ? '#777777' : '#AAAAAA' }
             ]}>
               {item.title}
             </Text>
-            <Text style={styles.lessonDuration}>
+            <Text style={[
+              styles.lessonDuration,
+              { color: isDarkMode ? '#AAAAAA' : '#666666' }
+            ]}>
               {item.duration}
             </Text>
           </View>
         </View>
         
         {item.isLocked ? (
-          <Icon name="lock" size={20} color="#AAAAAA" />
+          <Icon name="lock" size={20} color={isDarkMode ? "#777777" : "#AAAAAA"} />
         ) : (
-          <TouchableOpacity style={styles.playButton}>
-            <Icon name="play" size={18} color="#6200EE" />
+          <TouchableOpacity style={[
+            styles.playButton,
+            { backgroundColor: isDarkMode ? '#333333' : '#F0E6FF' }
+          ]}>
+            <Icon name="play" size={18} color={theme.colors.primary} />
           </TouchableOpacity>
         )}
       </View>
@@ -152,7 +189,7 @@ const LectureDetailScreen = ({ route, navigation }: LectureDetailScreenProps) =>
   );
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={['top']}>
       <ScrollView showsVerticalScrollIndicator={false}>
         <LinearGradient
           colors={[courseData.color1, courseData.color2]}
@@ -217,7 +254,7 @@ const LectureDetailScreen = ({ route, navigation }: LectureDetailScreenProps) =>
           </View>
         </LinearGradient>
         
-        <View style={styles.tabsContainer}>
+        <View style={[styles.tabsContainer, { backgroundColor: isDarkMode ? '#1E1E1E' : '#FFFFFF' }]}>
           <TouchableOpacity
             style={[styles.tab, activeTab === 'lessons' && styles.activeTab]}
             onPress={() => setActiveTab('lessons')}
@@ -225,7 +262,8 @@ const LectureDetailScreen = ({ route, navigation }: LectureDetailScreenProps) =>
             <Text
               style={[
                 styles.tabText,
-                activeTab === 'lessons' && styles.activeTabText,
+                { color: isDarkMode ? '#AAAAAA' : '#666666' },
+                activeTab === 'lessons' && { color: theme.colors.primary }
               ]}
             >
               Lessons
@@ -239,7 +277,8 @@ const LectureDetailScreen = ({ route, navigation }: LectureDetailScreenProps) =>
             <Text
               style={[
                 styles.tabText,
-                activeTab === 'details' && styles.activeTabText,
+                { color: isDarkMode ? '#AAAAAA' : '#666666' },
+                activeTab === 'details' && { color: theme.colors.primary }
               ]}
             >
               Details
@@ -253,7 +292,8 @@ const LectureDetailScreen = ({ route, navigation }: LectureDetailScreenProps) =>
             <Text
               style={[
                 styles.tabText,
-                activeTab === 'reviews' && styles.activeTabText,
+                { color: isDarkMode ? '#AAAAAA' : '#666666' },
+                activeTab === 'reviews' && { color: theme.colors.primary }
               ]}
             >
               Reviews
@@ -261,87 +301,171 @@ const LectureDetailScreen = ({ route, navigation }: LectureDetailScreenProps) =>
           </TouchableOpacity>
         </View>
         
-        {activeTab === 'lessons' && (
-          <View style={styles.lessonsContainer}>
-            <FlatList
-              data={courseData.lessons}
-              renderItem={renderLessonItem}
-              keyExtractor={(item) => item.id.toString()}
-              scrollEnabled={false}
-            />
-          </View>
-        )}
-        
-        {activeTab === 'details' && (
-          <View style={styles.detailsContainer}>
-            <Text style={styles.detailsTitle}>About This Course</Text>
-            <Text style={styles.detailsText}>
-              {courseData.description}
-            </Text>
-            
-            <Text style={styles.detailsTitle}>What You'll Learn</Text>
-            <View style={styles.learningPoints}>
-              <View style={styles.learningPoint}>
-                <Icon name="check-circle" size={20} color="#6200EE" />
-                <Text style={styles.learningPointText}>
-                  Master the sign language alphabet and numbers
-                </Text>
+        <View style={[styles.contentContainer, { backgroundColor: isDarkMode ? '#121212' : '#F8F9FA' }]}>
+          {activeTab === 'lessons' && (
+            <View>
+              <FlatList
+                data={courseData.lessons}
+                renderItem={renderLessonItem}
+                keyExtractor={(item) => item.id.toString()}
+                scrollEnabled={false}
+                ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
+              />
+            </View>
+          )}
+          
+          {activeTab === 'details' && (
+            <View style={styles.detailsContainer}>
+              <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>About This Course</Text>
+              <Text style={[styles.courseDescription, { color: theme.colors.textSecondary }]}>
+                {courseData.description}
+              </Text>
+              
+              <View style={[styles.detailCard, { backgroundColor: isDarkMode ? '#1E1E1E' : '#FFFFFF' }]}>
+                <View style={styles.detailRow}>
+                  <View style={styles.detailItem}>
+                    <Icon name="account" size={24} color={theme.colors.primary} />
+                    <View>
+                      <Text style={[styles.detailLabel, { color: theme.colors.textSecondary }]}>Instructor</Text>
+                      <Text style={[styles.detailValue, { color: theme.colors.text }]}>{courseData.instructor}</Text>
+                    </View>
+                  </View>
+                  
+                  <View style={styles.detailItem}>
+                    <Icon name="clock-outline" size={24} color={theme.colors.primary} />
+                    <View>
+                      <Text style={[styles.detailLabel, { color: theme.colors.textSecondary }]}>Duration</Text>
+                      <Text style={[styles.detailValue, { color: theme.colors.text }]}>{courseData.duration}</Text>
+                    </View>
+                  </View>
+                </View>
+                
+                <View style={styles.detailRow}>
+                  <View style={styles.detailItem}>
+                    <Icon name="book-open-variant" size={24} color={theme.colors.primary} />
+                    <View>
+                      <Text style={[styles.detailLabel, { color: theme.colors.textSecondary }]}>Lessons</Text>
+                      <Text style={[styles.detailValue, { color: theme.colors.text }]}>{courseData.lessons.length} lessons</Text>
+                    </View>
+                  </View>
+                  
+                  <View style={styles.detailItem}>
+                    <Icon name="signal-cellular-outline" size={24} color={theme.colors.primary} />
+                    <View>
+                      <Text style={[styles.detailLabel, { color: theme.colors.textSecondary }]}>Level</Text>
+                      <Text style={[styles.detailValue, { color: theme.colors.text }]}>{courseData.level}</Text>
+                    </View>
+                  </View>
+                </View>
               </View>
-              <View style={styles.learningPoint}>
-                <Icon name="check-circle" size={20} color="#6200EE" />
-                <Text style={styles.learningPointText}>
-                  Conduct basic conversations using sign language
-                </Text>
-              </View>
-              <View style={styles.learningPoint}>
-                <Icon name="check-circle" size={20} color="#6200EE" />
-                <Text style={styles.learningPointText}>
-                  Understand common signs used in everyday situations
-                </Text>
-              </View>
-              <View style={styles.learningPoint}>
-                <Icon name="check-circle" size={20} color="#6200EE" />
-                <Text style={styles.learningPointText}>
-                  Build confidence in communicating with the deaf community
-                </Text>
+              
+              <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>What You'll Learn</Text>
+              <View style={styles.learnList}>
+                <View style={[styles.learnItem, { borderBottomColor: isDarkMode ? '#333333' : '#EEEEEE' }]}>
+                  <View style={[styles.learnBullet, { backgroundColor: isDarkMode ? '#333333' : '#F0E6FF' }]}>
+                    <Icon name="check" size={14} color={theme.colors.primary} />
+                  </View>
+                  <Text style={[styles.learnText, { color: theme.colors.text }]}>
+                    Master finger spelling of the complete alphabet
+                  </Text>
+                </View>
+                
+                <View style={[styles.learnItem, { borderBottomColor: isDarkMode ? '#333333' : '#EEEEEE' }]}>
+                  <View style={[styles.learnBullet, { backgroundColor: isDarkMode ? '#333333' : '#F0E6FF' }]}>
+                    <Icon name="check" size={14} color={theme.colors.primary} />
+                  </View>
+                  <Text style={[styles.learnText, { color: theme.colors.text }]}>
+                    Learn common greetings and introductions
+                  </Text>
+                </View>
+                
+                <View style={[styles.learnItem, { borderBottomColor: isDarkMode ? '#333333' : '#EEEEEE' }]}>
+                  <View style={[styles.learnBullet, { backgroundColor: isDarkMode ? '#333333' : '#F0E6FF' }]}>
+                    <Icon name="check" size={14} color={theme.colors.primary} />
+                  </View>
+                  <Text style={[styles.learnText, { color: theme.colors.text }]}>
+                    Understand basic grammar and syntax of sign language
+                  </Text>
+                </View>
+                
+                <View style={[styles.learnItem, { borderBottomColor: isDarkMode ? '#333333' : '#EEEEEE' }]}>
+                  <View style={[styles.learnBullet, { backgroundColor: isDarkMode ? '#333333' : '#F0E6FF' }]}>
+                    <Icon name="check" size={14} color={theme.colors.primary} />
+                  </View>
+                  <Text style={[styles.learnText, { color: theme.colors.text }]}>
+                    Communicate simple concepts and ideas through signing
+                  </Text>
+                </View>
               </View>
             </View>
-          </View>
-        )}
-        
-        {activeTab === 'reviews' && (
-          <View style={styles.reviewsContainer}>
-            <Text style={styles.reviewsTitle}>
-              Student Reviews ({courseData.ratingCount})
-            </Text>
-            
-            <View style={styles.overallRating}>
-              <Text style={styles.ratingNumber}>{courseData.rating}</Text>
-              <View style={styles.starsContainer}>
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <Icon
-                    key={star}
-                    name={star <= Math.round(courseData.rating) ? 'star' : 'star-outline'}
-                    size={24}
-                    color="#FFD700"
-                  />
-                ))}
+          )}
+          
+          {activeTab === 'reviews' && (
+            <View style={styles.reviewsContainer}>
+              <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Student Reviews</Text>
+              <View style={[styles.reviewSummary, { backgroundColor: isDarkMode ? '#1E1E1E' : '#FFFFFF' }]}>
+                <View style={styles.ratingContainer}>
+                  <Text style={[styles.ratingNumber, { color: theme.colors.text }]}>{courseData.rating}</Text>
+                  <View style={styles.starsContainer}>
+                    <Icon name="star" size={18} color="#FFD700" />
+                    <Icon name="star" size={18} color="#FFD700" />
+                    <Icon name="star" size={18} color="#FFD700" />
+                    <Icon name="star" size={18} color="#FFD700" />
+                    <Icon name="star-half" size={18} color="#FFD700" />
+                  </View>
+                  <Text style={[styles.ratingsCount, { color: theme.colors.textSecondary }]}>
+                    {courseData.ratingCount} ratings
+                  </Text>
+                </View>
+                
+                <View style={styles.ratingBarContainer}>
+                  <View style={styles.ratingBarItem}>
+                    <Text style={[styles.ratingBarText, { color: theme.colors.textSecondary }]}>5</Text>
+                    <View style={[styles.ratingBar, { backgroundColor: isDarkMode ? '#333333' : '#EEEEEE' }]}>
+                      <View style={[styles.ratingFill, { width: '80%' }]} />
+                    </View>
+                  </View>
+                  
+                  <View style={styles.ratingBarItem}>
+                    <Text style={[styles.ratingBarText, { color: theme.colors.textSecondary }]}>4</Text>
+                    <View style={[styles.ratingBar, { backgroundColor: isDarkMode ? '#333333' : '#EEEEEE' }]}>
+                      <View style={[styles.ratingFill, { width: '15%' }]} />
+                    </View>
+                  </View>
+                  
+                  <View style={styles.ratingBarItem}>
+                    <Text style={[styles.ratingBarText, { color: theme.colors.textSecondary }]}>3</Text>
+                    <View style={[styles.ratingBar, { backgroundColor: isDarkMode ? '#333333' : '#EEEEEE' }]}>
+                      <View style={[styles.ratingFill, { width: '5%' }]} />
+                    </View>
+                  </View>
+                  
+                  <View style={styles.ratingBarItem}>
+                    <Text style={[styles.ratingBarText, { color: theme.colors.textSecondary }]}>2</Text>
+                    <View style={[styles.ratingBar, { backgroundColor: isDarkMode ? '#333333' : '#EEEEEE' }]}>
+                      <View style={[styles.ratingFill, { width: '0%' }]} />
+                    </View>
+                  </View>
+                  
+                  <View style={styles.ratingBarItem}>
+                    <Text style={[styles.ratingBarText, { color: theme.colors.textSecondary }]}>1</Text>
+                    <View style={[styles.ratingBar, { backgroundColor: isDarkMode ? '#333333' : '#EEEEEE' }]}>
+                      <View style={[styles.ratingFill, { width: '0%' }]} />
+                    </View>
+                  </View>
+                </View>
               </View>
+              
+              {/* Sample review items would go here */}
             </View>
-            
-            <Text style={styles.noReviewsText}>
-              No individual reviews to display yet. Be the first to leave a review!
-            </Text>
-            
-            <TouchableOpacity style={styles.writeReviewButton}>
-              <Text style={styles.writeReviewText}>Write a Review</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+          )}
+        </View>
       </ScrollView>
       
-      <View style={styles.bottomBar}>
-        <TouchableOpacity style={styles.continueButton}>
+      <View style={[styles.footer, { backgroundColor: isDarkMode ? '#1E1E1E' : '#FFFFFF' }]}>
+        <TouchableOpacity 
+          style={[styles.continueButton, { backgroundColor: theme.colors.primary }]}
+        >
           <Text style={styles.continueButtonText}>Continue Learning</Text>
         </TouchableOpacity>
       </View>
@@ -619,15 +743,123 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   continueButton: {
-    backgroundColor: '#6200EE',
-    paddingVertical: 15,
+    width: '100%',
     borderRadius: 25,
+    overflow: 'hidden',
+    paddingVertical: 15,
+    paddingHorizontal: 20,
     alignItems: 'center',
   },
   continueButtonText: {
     color: '#FFFFFF',
     fontWeight: 'bold',
     fontSize: 16,
+  },
+  contentContainer: {
+    padding: 20,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333333',
+    marginBottom: 10,
+  },
+  courseDescription: {
+    fontSize: 14,
+    lineHeight: 22,
+    color: '#666666',
+  },
+  detailCard: {
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 20,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  detailItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  detailLabel: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#333333',
+  },
+  detailValue: {
+    fontSize: 14,
+    color: '#666666',
+  },
+  learnList: {
+    marginTop: 5,
+  },
+  learnItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  learnBullet: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#F0E6FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  learnText: {
+    fontSize: 14,
+    color: '#666666',
+  },
+  reviewSummary: {
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 20,
+  },
+  ratingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  ratingsCount: {
+    fontSize: 14,
+    color: '#666666',
+    marginLeft: 10,
+  },
+  ratingBarContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  ratingBarItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  ratingBarText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#333333',
+  },
+  ratingBar: {
+    height: 20,
+    backgroundColor: '#EEEEEE',
+    borderRadius: 10,
+    marginRight: 10,
+  },
+  ratingFill: {
+    height: '100%',
+    backgroundColor: '#FFD700',
+    borderRadius: 10,
+  },
+  footer: {
+    padding: 15,
+    borderTopWidth: 1,
+    borderTopColor: '#EEEEEE',
+    backgroundColor: '#FFFFFF',
   },
 });
 

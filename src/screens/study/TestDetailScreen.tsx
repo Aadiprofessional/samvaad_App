@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useLayoutEffect } from 'react';
 import {
   View,
   Text,
@@ -7,11 +7,14 @@ import {
   TouchableOpacity,
   Image,
   Alert,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import LinearGradient from 'react-native-linear-gradient';
 import { TestDetailScreenProps } from '../../types/navigation';
+import { useTheme } from '../../context/ThemeContext';
+import { useIsFocused } from '@react-navigation/native';
 
 // Sample test data - this would come from an API in a real app
 const testData = {
@@ -45,6 +48,29 @@ const testData = {
 const TestDetailScreen = ({ route, navigation }: TestDetailScreenProps) => {
   const { testId } = route.params;
   const [activeSection, setActiveSection] = useState<'overview' | 'rules' | 'topics'>('overview');
+  const { theme, isDarkMode } = useTheme();
+  const isFocused = useIsFocused();
+  
+  // Updated code to hide the bottom tab when viewing test detail
+  useLayoutEffect(() => {
+    if (isFocused) {
+      navigation.getParent()?.setOptions({
+        tabBarStyle: { display: 'none' }
+      });
+    }
+    
+    return () => {
+      if (!isFocused) {
+        navigation.getParent()?.setOptions({
+          tabBarStyle: { 
+            display: 'flex',
+            backgroundColor: isDarkMode ? '#1E1E1E' : '#FFFFFF',
+            borderTopColor: isDarkMode ? '#333333' : '#EEEEEE' 
+          }
+        });
+      }
+    };
+  }, [navigation, isFocused, isDarkMode]);
   
   // In a real app, we would fetch test data based on testId
   // For now, we're using sample data
@@ -70,7 +96,7 @@ const TestDetailScreen = ({ route, navigation }: TestDetailScreenProps) => {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={['top']}>
       <ScrollView showsVerticalScrollIndicator={false}>
         <LinearGradient
           colors={[testData.color1, testData.color2]}
@@ -117,7 +143,7 @@ const TestDetailScreen = ({ route, navigation }: TestDetailScreenProps) => {
           </View>
         </LinearGradient>
         
-        <View style={styles.sectionsContainer}>
+        <View style={[styles.sectionsContainer, { backgroundColor: isDarkMode ? '#1E1E1E' : '#FFFFFF' }]}>
           <TouchableOpacity
             style={[styles.sectionTab, activeSection === 'overview' && styles.activeSection]}
             onPress={() => setActiveSection('overview')}
@@ -125,7 +151,8 @@ const TestDetailScreen = ({ route, navigation }: TestDetailScreenProps) => {
             <Text
               style={[
                 styles.sectionText,
-                activeSection === 'overview' && styles.activeSectionText,
+                { color: isDarkMode ? '#AAAAAA' : '#666666' },
+                activeSection === 'overview' && { color: theme.colors.primary },
               ]}
             >
               Overview
@@ -139,7 +166,8 @@ const TestDetailScreen = ({ route, navigation }: TestDetailScreenProps) => {
             <Text
               style={[
                 styles.sectionText,
-                activeSection === 'rules' && styles.activeSectionText,
+                { color: isDarkMode ? '#AAAAAA' : '#666666' },
+                activeSection === 'rules' && { color: theme.colors.primary },
               ]}
             >
               Rules
@@ -153,7 +181,8 @@ const TestDetailScreen = ({ route, navigation }: TestDetailScreenProps) => {
             <Text
               style={[
                 styles.sectionText,
-                activeSection === 'topics' && styles.activeSectionText,
+                { color: isDarkMode ? '#AAAAAA' : '#666666' },
+                activeSection === 'topics' && { color: theme.colors.primary },
               ]}
             >
               Topics
@@ -161,53 +190,53 @@ const TestDetailScreen = ({ route, navigation }: TestDetailScreenProps) => {
           </TouchableOpacity>
         </View>
         
-        <View style={styles.contentContainer}>
+        <View style={[styles.contentContainer, { backgroundColor: isDarkMode ? '#121212' : '#FFFFFF' }]}>
           {activeSection === 'overview' && (
             <View>
-              <Text style={styles.sectionTitle}>About This Test</Text>
-              <Text style={styles.descriptionText}>
+              <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>About This Test</Text>
+              <Text style={[styles.descriptionText, { color: theme.colors.textSecondary }]}>
                 {testData.description}
               </Text>
               
-              <View style={styles.infoCard}>
+              <View style={[styles.infoCard, { backgroundColor: isDarkMode ? '#1E1E1E' : '#FFFFFF' }]}>
                 <View style={styles.infoCardRow}>
                   <View style={styles.infoCardItem}>
-                    <Icon name="clock-outline" size={24} color="#6200EE" />
+                    <Icon name="clock-outline" size={24} color={theme.colors.primary} />
                     <View style={styles.infoCardTextContainer}>
-                      <Text style={styles.infoCardLabel}>Duration</Text>
-                      <Text style={styles.infoCardValue}>{testData.duration}</Text>
+                      <Text style={[styles.infoCardLabel, { color: theme.colors.textSecondary }]}>Duration</Text>
+                      <Text style={[styles.infoCardValue, { color: theme.colors.text }]}>{testData.duration}</Text>
                     </View>
                   </View>
                   
                   <View style={styles.infoCardItem}>
-                    <Icon name="signal-cellular-outline" size={24} color="#6200EE" />
+                    <Icon name="signal-cellular-outline" size={24} color={theme.colors.primary} />
                     <View style={styles.infoCardTextContainer}>
-                      <Text style={styles.infoCardLabel}>Difficulty</Text>
-                      <Text style={styles.infoCardValue}>{testData.level}</Text>
+                      <Text style={[styles.infoCardLabel, { color: theme.colors.textSecondary }]}>Difficulty</Text>
+                      <Text style={[styles.infoCardValue, { color: theme.colors.text }]}>{testData.level}</Text>
                     </View>
                   </View>
                 </View>
                 
                 <View style={styles.infoCardRow}>
                   <View style={styles.infoCardItem}>
-                    <Icon name="help-circle-outline" size={24} color="#6200EE" />
+                    <Icon name="help-circle-outline" size={24} color={theme.colors.primary} />
                     <View style={styles.infoCardTextContainer}>
-                      <Text style={styles.infoCardLabel}>Questions</Text>
-                      <Text style={styles.infoCardValue}>{testData.questions} Questions</Text>
+                      <Text style={[styles.infoCardLabel, { color: theme.colors.textSecondary }]}>Questions</Text>
+                      <Text style={[styles.infoCardValue, { color: theme.colors.text }]}>{testData.questions} Questions</Text>
                     </View>
                   </View>
                   
                   <View style={styles.infoCardItem}>
-                    <Icon name="trophy-outline" size={24} color="#6200EE" />
+                    <Icon name="trophy-outline" size={24} color={theme.colors.primary} />
                     <View style={styles.infoCardTextContainer}>
-                      <Text style={styles.infoCardLabel}>Pass Score</Text>
-                      <Text style={styles.infoCardValue}>{testData.passingScore}%</Text>
+                      <Text style={[styles.infoCardLabel, { color: theme.colors.textSecondary }]}>Pass Score</Text>
+                      <Text style={[styles.infoCardValue, { color: theme.colors.text }]}>{testData.passingScore}%</Text>
                     </View>
                   </View>
                 </View>
               </View>
               
-              <Text style={styles.noticeText}>
+              <Text style={[styles.noticeText, { color: theme.colors.textSecondary }]}>
                 This test is designed to assess your understanding of basic sign language concepts. 
                 Take your time and read each question carefully before answering.
               </Text>
@@ -216,23 +245,23 @@ const TestDetailScreen = ({ route, navigation }: TestDetailScreenProps) => {
           
           {activeSection === 'rules' && (
             <View>
-              <Text style={styles.sectionTitle}>Test Rules</Text>
-              <Text style={styles.rulesIntro}>
+              <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Test Rules</Text>
+              <Text style={[styles.rulesIntro, { color: theme.colors.textSecondary }]}>
                 Please read and understand the following rules before starting the test:
               </Text>
               
               {testData.rules.map((rule, index) => (
-                <View key={index} style={styles.ruleItem}>
-                  <View style={styles.ruleNumber}>
-                    <Text style={styles.ruleNumberText}>{index + 1}</Text>
+                <View key={index} style={[styles.ruleItem, { borderBottomColor: isDarkMode ? '#333333' : '#EEEEEE' }]}>
+                  <View style={[styles.ruleNumber, { backgroundColor: isDarkMode ? '#333333' : '#F0E6FF' }]}>
+                    <Text style={[styles.ruleNumberText, { color: theme.colors.primary }]}>{index + 1}</Text>
                   </View>
-                  <Text style={styles.ruleText}>{rule}</Text>
+                  <Text style={[styles.ruleText, { color: theme.colors.text }]}>{rule}</Text>
                 </View>
               ))}
               
-              <View style={styles.noteCard}>
-                <Icon name="information-outline" size={24} color="#6200EE" />
-                <Text style={styles.noteText}>
+              <View style={[styles.noteCard, { backgroundColor: isDarkMode ? '#1E1E1E' : '#F0E6FF20' }]}>
+                <Icon name="information-outline" size={24} color={theme.colors.primary} />
+                <Text style={[styles.noteText, { color: theme.colors.text }]}>
                   You can pause the test at any time, but the timer will continue running.
                 </Text>
               </View>
@@ -241,47 +270,27 @@ const TestDetailScreen = ({ route, navigation }: TestDetailScreenProps) => {
           
           {activeSection === 'topics' && (
             <View>
-              <Text style={styles.sectionTitle}>Test Topics</Text>
-              <Text style={styles.topicsIntro}>
+              <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Test Topics</Text>
+              <Text style={[styles.topicsIntro, { color: theme.colors.textSecondary }]}>
                 This test covers the following topics:
               </Text>
               
               {testData.topics.map((topic, index) => (
-                <View key={index} style={styles.topicItem}>
-                  <Icon name="check-circle" size={20} color="#6200EE" />
-                  <Text style={styles.topicText}>{topic}</Text>
+                <View key={index} style={[styles.topicItem, { backgroundColor: isDarkMode ? '#1E1E1E' : '#FFFFFF' }]}>
+                  <View style={styles.topicNumber}>
+                    <Text style={styles.topicNumberText}>{index + 1}</Text>
+                  </View>
+                  <Text style={[styles.topicText, { color: theme.colors.text }]}>{topic}</Text>
                 </View>
               ))}
-              
-              <View style={styles.preparationCard}>
-                <Text style={styles.preparationTitle}>Preparation Tips</Text>
-                <View style={styles.preparationItem}>
-                  <Icon name="lightbulb-outline" size={18} color="#FF9800" />
-                  <Text style={styles.preparationText}>
-                    Review all alphabet signs before taking the test
-                  </Text>
-                </View>
-                <View style={styles.preparationItem}>
-                  <Icon name="lightbulb-outline" size={18} color="#FF9800" />
-                  <Text style={styles.preparationText}>
-                    Practice finger spelling common words
-                  </Text>
-                </View>
-                <View style={styles.preparationItem}>
-                  <Icon name="lightbulb-outline" size={18} color="#FF9800" />
-                  <Text style={styles.preparationText}>
-                    Make sure you're in a quiet environment for the test
-                  </Text>
-                </View>
-              </View>
             </View>
           )}
         </View>
       </ScrollView>
       
-      <View style={styles.bottomBar}>
-        <TouchableOpacity 
-          style={styles.startButton}
+      <View style={[styles.footer, { backgroundColor: isDarkMode ? '#1E1E1E' : '#FFFFFF' }]}>
+        <TouchableOpacity
+          style={[styles.startButton, { backgroundColor: theme.colors.primary }]}
           onPress={handleStartTest}
         >
           <Text style={styles.startButtonText}>Start Test</Text>
@@ -486,11 +495,39 @@ const styles = StyleSheet.create({
   topicItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 15,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    padding: 15,
+    marginBottom: 10,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
+  },
+  topicNumber: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#F0E6FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  topicNumberText: {
+    fontWeight: 'bold',
+    fontSize: 14,
+    color: '#6200EE',
   },
   topicText: {
-    marginLeft: 10,
-    fontSize: 14,
+    flex: 1,
+    fontSize: 16,
     color: '#333333',
   },
   preparationCard: {
@@ -523,8 +560,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   startButton: {
-    backgroundColor: '#6200EE',
     paddingVertical: 15,
+    paddingHorizontal: 20,
     borderRadius: 25,
     alignItems: 'center',
   },
@@ -532,6 +569,18 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: 'bold',
     fontSize: 16,
+  },
+  footer: {
+    padding: 15,
+    borderTopWidth: 1,
+    borderTopColor: '#EEEEEE',
+    backgroundColor: '#FFFFFF',
+  },
+  startButtonGradient: {
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    borderRadius: 25,
+    alignItems: 'center',
   },
 });
 

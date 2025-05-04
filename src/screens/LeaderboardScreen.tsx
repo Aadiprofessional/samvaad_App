@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useLayoutEffect } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import LinearGradient from 'react-native-linear-gradient';
 import { useTheme } from '../context/ThemeContext';
+import { useIsFocused } from '@react-navigation/native';
+import { LeaderboardScreenProps } from '../types/navigation';
 
 const { width } = Dimensions.get('window');
 
@@ -259,10 +261,26 @@ const achievements: AchievementType[] = [
 
 type TabsType = 'ranking' | 'stats' | 'achievements';
 
-const LeaderboardScreen = () => {
+const LeaderboardScreen = ({ navigation }: LeaderboardScreenProps) => {
   const [activeTab, setActiveTab] = useState<TabsType>('ranking');
   const [timeFilter, setTimeFilter] = useState<'week' | 'month' | 'all'>('week');
   const { theme, isDarkMode } = useTheme();
+  const isFocused = useIsFocused();
+  
+  // Add code to ensure bottom tab is visible
+  useLayoutEffect(() => {
+    if (isFocused) {
+      navigation.getParent()?.setOptions({
+        tabBarStyle: { display: 'flex' }
+      });
+    }
+    
+    return () => {
+      navigation.getParent()?.setOptions({
+        tabBarStyle: undefined
+      });
+    };
+  }, [navigation, isFocused]);
   
   // Current user - in a real app, this would come from an auth system
   const currentUser = {
@@ -319,42 +337,58 @@ const LeaderboardScreen = () => {
   };
 
   const renderGameStatItem = ({ item }: { item: GameStatsType }) => (
-    <View style={[styles.gameStatItem, { backgroundColor: isDarkMode ? '#1E1E1E' : '#FFFFFF' }]}>
-      <LinearGradient
-        colors={[item.color1, item.color2]}
-        style={styles.gameStatHeader}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-      >
-        <Icon name={item.icon} size={24} color="#FFFFFF" />
-        <Text style={styles.gameStatName} numberOfLines={1} ellipsizeMode="tail">{item.name}</Text>
-      </LinearGradient>
-      
-      <View style={styles.gameStatContent}>
-        <View style={styles.gameStatRow}>
-          <Text style={[styles.gameStatLabel, { color: theme.colors.text }]}>Current Score:</Text>
-          <Text style={[styles.gameStatValue, { color: theme.colors.text }]}>{item.score}</Text>
-        </View>
-        
-        <View style={styles.gameStatRow}>
-          <Text style={[styles.gameStatLabel, { color: theme.colors.text }]}>High Score:</Text>
-          <Text style={[styles.gameStatValue, { color: theme.colors.text }]}>{item.highScore}</Text>
-        </View>
-        
-        <View style={styles.gameStatProgressContainer}>
-          <View style={styles.gameStatProgressLabel}>
-            <Text style={[styles.gameStatProgressText, { color: theme.colors.text }]}>Completion</Text>
-            <Text style={[styles.gameStatProgressPercent, { color: theme.colors.text }]}>{item.completionRate}%</Text>
+    <View style={styles.gameStatCard}>
+      <View style={[styles.gameStatCardContainer, { backgroundColor: isDarkMode ? '#333333' : '#FFFFFF' }]}>
+        <LinearGradient
+          colors={[item.color1, item.color2]}
+          style={styles.gameStatCardGradientStrip}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+        />
+        <View style={styles.gameStatCardContent}>
+          <View style={styles.gameStatHeader}>
+            <View style={[styles.gameStatIconContainer, { backgroundColor: item.color1 }]}>
+              <Icon name={item.icon} size={24} color="#FFFFFF" />
+            </View>
+            <Text style={[styles.gameStatTitle, { color: isDarkMode ? '#FFFFFF' : '#333333' }]}>{item.name}</Text>
           </View>
           
-          <View style={[styles.gameStatProgressBar, { backgroundColor: isDarkMode ? '#333333' : '#EEEEEE' }]}>
-            <View 
-              style={[
-                styles.gameStatProgressFill,
-                { width: `${item.completionRate}%`,
-                  backgroundColor: item.color1 }
-              ]} 
-            />
+          <View style={styles.gameStatDetails}>
+            <View style={styles.gameStatDetail}>
+              <Text style={[styles.gameStatLabel, { color: isDarkMode ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.6)' }]}>
+                Current Score:
+              </Text>
+              <Text style={[styles.gameStatValue, { color: isDarkMode ? '#FFFFFF' : '#333333' }]}>
+                {item.score}
+              </Text>
+            </View>
+            
+            <View style={styles.gameStatDetail}>
+              <Text style={[styles.gameStatLabel, { color: isDarkMode ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.6)' }]}>
+                High Score:
+              </Text>
+              <Text style={[styles.gameStatValue, { color: isDarkMode ? '#FFFFFF' : '#333333' }]}>
+                {item.highScore}
+              </Text>
+            </View>
+            
+            <View style={styles.gameStatDetail}>
+              <Text style={[styles.gameStatLabel, { color: isDarkMode ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.6)' }]}>
+                Completion:
+              </Text>
+              <Text style={[styles.gameStatValue, { color: isDarkMode ? '#FFFFFF' : '#333333' }]}>
+                {item.completionRate}%
+              </Text>
+            </View>
+            
+            <View style={[styles.gameStatProgressBar, { backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)' }]}>
+              <View 
+                style={[
+                  styles.gameStatProgressFill, 
+                  { width: `${item.completionRate}%`, backgroundColor: item.color1 }
+                ]} 
+              />
+            </View>
           </View>
         </View>
       </View>
@@ -409,26 +443,27 @@ const LeaderboardScreen = () => {
 
   const renderSummaryCard = () => (
     <View style={styles.summaryCard}>
-      <LinearGradient
-        colors={['#6a11cb', '#2575fc']}
-        style={styles.summaryCardGradient}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-      >
+      <View style={[styles.summaryCardContainer, { backgroundColor: theme.colors.primary }]}>
         <View style={styles.summaryCardContent}>
           <View style={styles.summaryUserInfo}>
-            <Image source={currentUser.avatar} style={styles.summaryAvatar} />
-            <View>
-              <Text style={styles.summaryUserName} numberOfLines={1} ellipsizeMode="tail">{currentUser.name}</Text>
+            <Image 
+              source={currentUser.avatar} 
+              style={styles.summaryAvatar} 
+            />
+            <View style={styles.userTextInfo}>
+              <Text style={styles.summaryUserName} numberOfLines={1} ellipsizeMode="tail">
+                {currentUser.name}
+              </Text>
               <View style={styles.summaryRank}>
-                <Text style={styles.summaryRankText}>Rank #{currentUser.rank}</Text>
+                <Text style={styles.summaryRankText} numberOfLines={1} ellipsizeMode="tail">
+                  Rank #{currentUser.rank}
+                </Text>
                 <View style={styles.summaryRankChange}>
-                  {currentUser.change === 'up' && (
+                  {currentUser.change === 'up' ? (
                     <Icon name="arrow-up" size={14} color="#4CAF50" />
-                  )}
-                  {currentUser.change === 'down' && (
+                  ) : currentUser.change === 'down' ? (
                     <Icon name="arrow-down" size={14} color="#F44336" />
-                  )}
+                  ) : null}
                 </View>
               </View>
             </View>
@@ -436,14 +471,16 @@ const LeaderboardScreen = () => {
           
           <View style={styles.summaryStats}>
             <View style={styles.summaryStat}>
-              <Text style={styles.summaryStatValue}>{currentUser.score.toLocaleString()}</Text>
+              <Text style={styles.summaryStatValue} adjustsFontSizeToFit numberOfLines={1} ellipsizeMode="tail">
+                {currentUser.score.toLocaleString()}
+              </Text>
               <Text style={styles.summaryStatLabel}>Points</Text>
             </View>
             
             <View style={styles.summaryStatDivider} />
             
             <View style={styles.summaryStat}>
-              <Text style={styles.summaryStatValue}>
+              <Text style={styles.summaryStatValue} adjustsFontSizeToFit numberOfLines={1} ellipsizeMode="tail">
                 {achievements.filter(a => a.completed).length}
               </Text>
               <Text style={styles.summaryStatLabel}>Achievements</Text>
@@ -452,14 +489,14 @@ const LeaderboardScreen = () => {
             <View style={styles.summaryStatDivider} />
             
             <View style={styles.summaryStat}>
-              <Text style={styles.summaryStatValue}>
+              <Text style={styles.summaryStatValue} adjustsFontSizeToFit numberOfLines={1} ellipsizeMode="tail">
                 {Math.round(gameStats.reduce((acc, game) => acc + game.completionRate, 0) / gameStats.length)}%
               </Text>
               <Text style={styles.summaryStatLabel}>Completion</Text>
             </View>
           </View>
         </View>
-      </LinearGradient>
+      </View>
     </View>
   );
 
@@ -628,19 +665,20 @@ const styles = StyleSheet.create({
   summaryCard: {
     marginHorizontal: 20,
     marginBottom: 20,
-    borderRadius: 15,
+    borderRadius: 16,
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 3,
     },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 5,
   },
-  summaryCardGradient: {
-    padding: 15,
+  summaryCardContainer: {
+    width: '100%',
+    padding: 20,
   },
   summaryCardContent: {
     width: '100%',
@@ -648,61 +686,69 @@ const styles = StyleSheet.create({
   summaryUserInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 15,
+    marginBottom: 20,
   },
   summaryAvatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 46,
+    height: 46,
+    borderRadius: 23,
     marginRight: 15,
     borderWidth: 2,
     borderColor: 'rgba(255, 255, 255, 0.5)',
+  },
+  userTextInfo: {
+    flex: 1,
   },
   summaryUserName: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#FFFFFF',
     marginBottom: 5,
-    maxWidth: 200,
   },
   summaryRank: {
     flexDirection: 'row',
     alignItems: 'center',
+    width: '90%',
   },
   summaryRankText: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.8)',
-    marginRight: 5,
+    color: 'rgba(255, 255, 255, 0.9)',
+    flexShrink: 1,
   },
   summaryRankChange: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    marginLeft: 5,
+    width: 14,
   },
   summaryStats: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
     borderRadius: 10,
-    padding: 10,
+    paddingVertical: 15,
+    paddingHorizontal: 12,
   },
   summaryStat: {
     flex: 1,
     alignItems: 'center',
   },
   summaryStatValue: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
     color: '#FFFFFF',
-    marginBottom: 5,
+    marginBottom: 4,
+    width: '100%',
+    textAlign: 'center',
   },
   summaryStatLabel: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: 'rgba(255, 255, 255, 0.9)',
+    textAlign: 'center',
   },
   summaryStatDivider: {
     width: 1,
-    height: '100%',
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    height: 30,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
   },
   tabsContainer: {
     flexDirection: 'row',
@@ -820,65 +866,66 @@ const styles = StyleSheet.create({
     width: 30,
     alignItems: 'center',
   },
-  gameStatItem: {
-    borderRadius: 10,
+  gameStatCard: {
+    marginHorizontal: 20,
+    marginBottom: 20,
+    borderRadius: 15,
     overflow: 'hidden',
-    marginBottom: 15,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 2,
     },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  gameStatCardContainer: {
+    flex: 1,
+  },
+  gameStatCardGradientStrip: {
+    height: 10,
+  },
+  gameStatCardContent: {
+    padding: 20,
   },
   gameStatHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
+    marginBottom: 20,
   },
-  gameStatName: {
-    color: '#FFFFFF',
+  gameStatIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  gameStatTitle: {
+    fontSize: 18,
     fontWeight: 'bold',
-    fontSize: 16,
-    marginLeft: 10,
-    flex: 1,
   },
-  gameStatContent: {
-    padding: 15,
+  gameStatDetails: {
+    width: '100%',
   },
-  gameStatRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  gameStatDetail: {
     marginBottom: 10,
   },
   gameStatLabel: {
     fontSize: 14,
+    marginBottom: 4,
   },
   gameStatValue: {
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  gameStatProgressContainer: {
-    marginTop: 5,
-  },
-  gameStatProgressLabel: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 5,
-  },
-  gameStatProgressText: {
-    fontSize: 14,
-  },
-  gameStatProgressPercent: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: 'bold',
   },
   gameStatProgressBar: {
     height: 6,
     borderRadius: 3,
     overflow: 'hidden',
+    marginTop: 10,
+    backgroundColor: 'rgba(0, 0, 0, 0.1)',
   },
   gameStatProgressFill: {
     height: '100%',
