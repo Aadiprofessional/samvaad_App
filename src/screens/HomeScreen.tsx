@@ -24,7 +24,7 @@ import Button from '../components/Button';
 import ThemeToggle from '../components/ThemeToggle';
 import SliderComponent from '../components/SliderComponent';
 import GameCard from '../components/GameCard';
-import { NavigationProp, ParamListBase } from '@react-navigation/native';
+import { NavigationProp, ParamListBase, useIsFocused } from '@react-navigation/native';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = width / 2 - scale(32); // 2 cards per row with more spacing
@@ -78,8 +78,10 @@ const DEFAULT_GRADIENTS = {
 
 const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const { theme, isDarkMode } = useTheme();
-  const { profile, user } = useAuth();
+  const { profile, user, refreshProfile } = useAuth();
   const [userData, setUserData] = useState<UserData | null>(null);
+  const isFocused = useIsFocused();
+  const justFocused = useRef(false);
   
   // Animated header values
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -101,28 +103,50 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     extrapolate: 'clamp',
   });
 
+  // Update userData when profile changes
   useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        if (user) {
-          // Use user metadata instead of querying the database if profiles table doesn't exist
-          setUserData({
-            name: user.user_metadata?.name || 'User'
-          });
-        }
-      } catch (error) {
-        console.error('Error fetching user data:', error);
-        // Fallback to user metadata if database query fails
-        if (user?.user_metadata) {
-          setUserData({
-            name: user.user_metadata.name || 'User'
-          });
-        }
-      }
-    };
+    console.log('HomeScreen profile effect triggered');
+    console.log('Current profile state:', profile);
+    console.log('Current user state:', user);
     
-    fetchUserData();
-  }, [user]);
+    // Handle case where profile might be an array (from API response)
+    const profileData = Array.isArray(profile) ? profile[0] : profile;
+    
+    if (profileData) {
+      console.log('Setting userData with profile:', {
+        name: profileData.name,
+        profileImage: profileData.profile_image_url
+      });
+      
+      setUserData({
+        name: profileData.name || user?.user_metadata?.name || 'User',
+        profileImage: profileData.profile_image_url
+      });
+      console.log('Profile data updated in HomeScreen:', profileData.name, profileData.profile_image_url);
+    } else if (user) {
+      console.log('No profile available, using user data only');
+      setUserData({
+        name: user.user_metadata?.name || 'User'
+      });
+    } else {
+      console.log('No profile or user data available in HomeScreen');
+    }
+  }, [profile, user]);
+
+  // Force immediate refresh when returning to this screen
+  useEffect(() => {
+    if (isFocused && refreshProfile) {
+      console.log('HomeScreen focused, refreshing profile data');
+      // Force refresh on focus
+      refreshProfile()
+        .then(() => {
+          console.log('Profile refresh completed in HomeScreen');
+        })
+        .catch(error => {
+          console.error('Error refreshing profile data:', error);
+        });
+    }
+  }, [isFocused]);
   
   const getGradient = (type: 'play' | 'learn' | 'translate') => {
     return DEFAULT_GRADIENTS[type];
@@ -311,10 +335,17 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               style={styles.profileButton}
               onPress={() => navigation.navigate('Profile')}
             >
-              <Image 
-                source={require('../assets/images/placeholder-avatar.png')}
-                style={styles.profileImage}
-              />
+              {userData?.profileImage ? (
+                <Image 
+                  source={{ uri: userData.profileImage }}
+                  style={styles.profileImage}
+                />
+              ) : (
+                <Image 
+                  source={require('../assets/images/placeholder-avatar.png')}
+                  style={styles.profileImage}
+                />
+              )}
             </TouchableOpacity>
           </View>
         </Animated.View>

@@ -15,6 +15,7 @@ import StudyScreen from '../screens/StudyScreen';
 import TranslatorScreen from '../screens/TranslatorScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import SettingsScreen from '../screens/SettingsScreen';
+import ChangePasswordScreen from '../screens/ChangePasswordScreen';
 
 // Game screens
 import FlipCardGameScreen from '../games/FlipCardGame';
@@ -40,6 +41,7 @@ const HomeStack = () => (
     <Stack.Screen name="HomeScreen" component={HomeScreen} />
     <Stack.Screen name="Settings" component={SettingsScreen} />
     <Stack.Screen name="Profile" component={ProfileScreen} />
+    <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
   </Stack.Navigator>
 );
 

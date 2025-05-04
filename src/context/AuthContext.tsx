@@ -1,8 +1,15 @@
-import React, { createContext, useState, useEffect, useContext } from 'react';
+import React, { createContext, useState, useEffect, useContext, useRef } from 'react';
 import { supabase, supabaseAdmin } from '../services/supabaseClient';
 import * as authService from '../services/authService';
 import { UserRole } from '../services/authService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+
+// Notification type definition
+interface Notification {
+  type: 'success' | 'error' | 'info';
+  message: string;
+  autoClose?: boolean;
+}
 
 // Define the auth state
 interface AuthState {
@@ -10,6 +17,7 @@ interface AuthState {
   profile: any | null;
   session: any | null;
   isLoading: boolean;
+  notifications: Notification[];
 }
 
 // Define the auth context
@@ -23,9 +31,12 @@ interface AuthContextType extends AuthState {
   checkEmailConfirmationStatus: (userId: string) => Promise<any>;
   confirmEmail: (token: string) => Promise<any>;
   updateProfile: (profileData: Partial<authService.UserSignupData>) => Promise<boolean>;
+  refreshProfile: () => Promise<boolean>;
   resendConfirmationEmail: (email: string) => Promise<boolean>;
   getUserByRollNumber: (rollNumber: string) => Promise<any>;
   manuallyConfirmUserEmail: (userId: string) => Promise<any>;
+  addNotification: (notification: Notification) => void;
+  removeNotification: (index: number) => void;
 }
 
 // Create the auth context
@@ -38,7 +49,45 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     profile: null,
     session: null,
     isLoading: true,
+    notifications: [],
   });
+  
+  // Add a ref to track last refresh time
+  const lastRefreshTime = useRef<number>(0);
+  const MIN_REFRESH_INTERVAL = 3000; // 3 seconds minimum between refreshes
+
+  // Notification handlers
+  const addNotification = (notification: Notification) => {
+    setState(prev => ({
+      ...prev,
+      notifications: [...prev.notifications, notification]
+    }));
+    
+    // Auto-close notification if specified
+    if (notification.autoClose) {
+      setTimeout(() => {
+        setState(prev => ({
+          ...prev,
+          notifications: prev.notifications.filter(n => n !== notification)
+        }));
+      }, 3000);
+    }
+  };
+  
+  const removeNotification = (index: number) => {
+    setState(prev => ({
+      ...prev,
+      notifications: prev.notifications.filter((_, i) => i !== index)
+    }));
+  };
+  
+  // Helper to set loading state
+  const setLoading = (loading: boolean) => {
+    setState(prev => ({
+      ...prev,
+      isLoading: loading
+    }));
+  };
 
   // Initialize auth state
   useEffect(() => {
@@ -70,12 +119,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           
           if (userInfo && userInfo.profile) {
             console.log('User profile loaded successfully');
-            setState({
+            
+            // Normalize profile if it's an array
+            const normalizedProfile = normalizeProfile(userInfo.profile);
+            
+            setState(prev => ({
+              ...prev,
               user: userInfo.user,
-              profile: userInfo.profile,
+              profile: normalizedProfile,
               session,
               isLoading: false,
-            });
+            }));
           } else {
             // User exists but profile not loaded - try to recreate it
             console.log('Session exists but no profile found in the database. Attempting to create it now...');
@@ -128,12 +182,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                   
                 if (!fetchError && newProfile) {
                   console.log('Retrieved newly created profile');
-                  setState({
+                  setState(prev => ({
+                    ...prev,
                     user: user,
                     profile: newProfile,
                     session,
                     isLoading: false
-                  });
+                  }));
                   return; // Exit early since we've set the state
                 }
               }
@@ -143,31 +198,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
             
             // If recovery failed, set state with just the user
-            setState({
+            setState(prev => ({
+              ...prev,
               user: session.user,
               profile: null,
               session,
               isLoading: false,
-            });
+            }));
           }
         } else {
           // No session found
           console.log('No active session, user is not logged in');
-          setState({
+          setState(prev => ({
+            ...prev,
             user: null,
             profile: null,
             session: null,
             isLoading: false,
-          });
+          }));
         }
       } catch (error) {
         console.error('Error initializing auth:', error);
-        setState({
+        setState(prev => ({
+          ...prev,
           user: null,
           profile: null,
           session: null,
           isLoading: false,
-        });
+        }));
       }
     };
 
@@ -187,12 +245,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           // Get user profile
           const userInfo = await authService.getCurrentUser();
           
-          setState({
+          // Normalize profile if it's an array
+          const normalizedProfile = userInfo?.profile ? normalizeProfile(userInfo.profile) : null;
+          
+          setState(prev => ({
+            ...prev,
             user: userInfo?.user || session.user,
-            profile: userInfo?.profile || null,
+            profile: normalizedProfile,
             session,
             isLoading: false,
-          });
+          }));
           console.log('Auth state updated after sign-in');
         } else if (event === 'SIGNED_OUT') {
           console.log('User signed out, clearing state');
@@ -200,21 +262,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           await AsyncStorage.removeItem('userSession');
           
           // Clear state on sign out
-          setState({
+          setState(prev => ({
+            ...prev,
             user: null,
             profile: null,
             session: null,
             isLoading: false,
-          });
+          }));
         } else if (event === 'USER_UPDATED' && session) {
           console.log('User updated, refreshing data');
           // Refresh user data
           const userInfo = await authService.getCurrentUser();
           
+          // Normalize profile if it's an array
+          const normalizedProfile = userInfo?.profile ? normalizeProfile(userInfo.profile) : null;
+          
           setState(prev => ({
             ...prev,
             user: userInfo?.user || session.user,
-            profile: userInfo?.profile || null,
+            profile: normalizedProfile,
             session,
           }));
         }
@@ -268,12 +334,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       console.log('Sign out successful');
-      setState({
+      setState(prev => ({
+        ...prev,
         user: null,
         profile: null,
         session: null,
         isLoading: false,
-      });
+      }));
       
       return true;
     } catch (error) {
@@ -316,9 +383,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (result && state.user?.id === parentId) {
         const userInfo = await authService.getCurrentUser();
         if (userInfo) {
+          // Normalize profile if it's an array
+          const normalizedProfile = normalizeProfile(userInfo.profile);
+          
           setState(prev => ({
             ...prev,
-            profile: userInfo.profile,
+            profile: normalizedProfile,
           }));
         }
       }
@@ -350,13 +420,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const userInfo = await authService.getCurrentUser();
           if (userInfo) {
             console.log("User data refreshed successfully");
+            
+            // Normalize profile if it's an array
+            const normalizedProfile = normalizeProfile(userInfo.profile);
+            
             // Update auth state with confirmed user
-            setState({
+            setState(prev => ({
+              ...prev,
               user: userInfo.user,
-              profile: userInfo.profile,
+              profile: normalizedProfile,
               session: null, // This will be set on next login
               isLoading: false,
-            });
+            }));
             
             // Update the confirmation status in the database
             try {
@@ -393,7 +468,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Manually confirm user email
   const handleManuallyConfirmUserEmail = async (userId: string) => {
     try {
-      console.log("Manually confirming email for user:", userId);
+      console.log("Manually confirming user email for user:", userId);
       
       if (!userId) {
         throw new Error("Invalid user ID");
@@ -401,14 +476,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       const result = await authService.manuallyConfirmUserEmail(userId);
       
-      // Update the auth state with the confirmed user data
-      if (result && result.user && result.profile) {
-        console.log("Email manually confirmed, updating auth state with user data");
+      // If successful, update the local state if this is the current user
+      if (result && result.success && state.user?.id === userId) {
+        console.log("User confirmed, updating local state");
         
-        // Fetch the user's credentials from AsyncStorage to automatically sign them in
-        const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
-        const storedData = await AsyncStorage.getItem(`pending_user_${userId}`);
-        
+        // Try auto login if we have credentials
+        const storedData = await AsyncStorage.getItem('pendingConfirmation');
         if (storedData) {
           const userData = JSON.parse(storedData);
           
@@ -447,12 +520,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
         
         // If auto-login didn't happen, just update the state
-        setState({
+        // Normalize profile if it's an array
+        const normalizedProfile = normalizeProfile(result.profile);
+        
+        setState(prev => ({
+          ...prev,
           user: result.user,
-          profile: result.profile,
+          profile: normalizedProfile,
           session: null, // Will be set on next manual login
           isLoading: false,
-        });
+        }));
       }
       
       return result;
@@ -471,12 +548,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (result && result.user && result.profile) {
         console.log("Email confirmed, updating auth state with user data");
         
-        setState({
+        // Normalize profile if it's an array
+        const normalizedProfile = normalizeProfile(result.profile);
+        
+        setState(prev => ({
+          ...prev,
           user: result.user,
-          profile: result.profile,
+          profile: normalizedProfile,
           session: null, // This will be set on next login
           isLoading: false,
-        });
+        }));
       }
       
       return result;
@@ -486,28 +567,63 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Helper function to normalize profile data
+  const normalizeProfile = (profile: any) => {
+    // Convert array to single profile object if needed
+    if (Array.isArray(profile)) {
+      return profile[0];
+    }
+    return profile;
+  };
+
   // Update user profile
   const handleUpdateProfile = async (profileData: Partial<authService.UserSignupData>) => {
     try {
-      if (!state.user?.id) throw new Error('User not authenticated');
+      setLoading(true);
+      console.log('handleUpdateProfile called with:', profileData);
       
-      const result = await authService.updateUserProfile(state.user.id, profileData);
-      
-      if (result) {
-        // Refresh profile data
-        const userInfo = await authService.getCurrentUser();
-        if (userInfo) {
-          setState(prev => ({
-            ...prev,
-            profile: userInfo.profile,
-          }));
-        }
+      if (!state.user || !state.profile) {
+        console.error('Cannot update profile: User or profile is undefined');
+        throw new Error('User or profile not found');
       }
       
-      return result;
+      // Call to authService update function
+      const updatedProfile = await authService.updateUserProfile(state.user.id, profileData);
+      console.log('Profile updated in database, returned data:', updatedProfile);
+      
+      // Now set the updated user profile in state
+      if (updatedProfile) {
+        // Normalize profile data if it's an array
+        const normalizedProfile = normalizeProfile(updatedProfile);
+        
+        setState(prev => ({
+          ...prev,
+          profile: normalizedProfile
+        }));
+        console.log('Profile state updated with new data:', normalizedProfile);
+        
+        // Force a refresh of the profile
+        await handleRefreshProfile();
+        
+        // Set success notification
+        addNotification({
+          type: 'success',
+          message: 'Profile updated successfully',
+          autoClose: true,
+        });
+      }
+      
+      return true;
     } catch (error) {
       console.error('Error updating profile:', error);
-      throw error;
+      addNotification({
+        type: 'error',
+        message: (error as Error).message || 'Failed to update profile',
+        autoClose: true,
+      });
+      return false;
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -551,6 +667,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Refresh profile
+  const handleRefreshProfile = async () => {
+    try {
+      // Force refresh from database by calling getCurrentUser
+      console.log('Forcing profile refresh from database');
+      const userInfo = await authService.getCurrentUser();
+      
+      if (userInfo) {
+        // Normalize profile data if it's an array
+        const normalizedProfile = normalizeProfile(userInfo.profile);
+        
+        // Always update the state since we're explicitly requesting a refresh
+        console.log('Setting fresh profile data from database');
+        setState(prev => ({
+          ...prev,
+          user: userInfo.user,
+          profile: normalizedProfile,
+          session: prev.session,
+          isLoading: false,
+        }));
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error refreshing profile:', error);
+      throw error;
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -564,9 +709,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         checkEmailConfirmationStatus: handleCheckEmailConfirmationStatus,
         confirmEmail: handleConfirmEmail,
         updateProfile: handleUpdateProfile,
+        refreshProfile: handleRefreshProfile,
         resendConfirmationEmail: handleResendConfirmationEmail,
         getUserByRollNumber: handleGetUserByRollNumber,
         manuallyConfirmUserEmail: handleManuallyConfirmUserEmail,
+        addNotification,
+        removeNotification,
       }}
     >
       {children}

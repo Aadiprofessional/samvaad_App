@@ -23,6 +23,7 @@ export interface UserSignupData {
   role: UserRole;
   age?: number;
   rollNumber?: string; // Generated automatically for all users
+  profile_image_url?: string; // Profile image URL
   
   // For deaf users
   proficiency?: DeafUserProficiency;
@@ -230,80 +231,120 @@ export const resetPassword = async (email: string) => {
 // Get current user
 export const getCurrentUser = async () => {
   try {
-    const { data: { user } } = await supabase.auth.getUser();
+    console.log('Getting current user from authService...');
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
     
-    if (!user) return null;
-    
-    // Get user profile
-    const { data: profile, error: profileError } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', user.id)
-      .single();
-      
-    if (profileError) {
-      console.error('Error getting user profile:', profileError);
-      
-      // Check if this is a "not found" error - if so, try to create the profile
-      if (profileError.code === 'PGRST116') {
-        console.log('User exists in auth but not in database, attempting to create profile');
-        
-        try {
-          // Generate a roll number
-          const rollNumber = Math.floor(100000 + Math.random() * 900000).toString();
-          
-          // Create basic profile from auth data
-          const profileData = {
-            id: user.id,
-            email: user.email,
-            name: user.user_metadata?.name || 'User',
-            role: user.user_metadata?.role || 'deaf',
-            roll_number: rollNumber,
-            email_confirmed: user.user_metadata?.email_verified || false,
-            created_at: new Date().toISOString()
-          };
-          
-          // Create user profile in database using admin client (bypasses RLS)
-          const { error: createError } = await supabaseAdmin
-            .from('users')
-            .upsert([profileData]);
-            
-          if (createError) {
-            console.error('Error creating missing user profile:', createError);
-            // Return just the user without profile
-            return { user, profile: null };
-          }
-          
-          // Fetch the newly created profile
-          const { data: newProfile, error: fetchError } = await supabaseAdmin
-            .from('users')
-            .select('*')
-            .eq('id', user.id)
-            .single();
-            
-          if (fetchError) {
-            console.error('Error fetching newly created profile:', fetchError);
-            return { user, profile: null };
-          }
-          
-          console.log('Successfully created and retrieved missing user profile');
-          return { user, profile: newProfile };
-        } catch (createError) {
-          console.error('Error recovering user profile:', createError);
-          return { user, profile: null };
-        }
-      }
-      
-      // For other errors, just return the user without profile
-      return { user, profile: null };
+    if (userError) {
+      console.error('Error fetching current user:', userError);
+      return null;
     }
     
-    return { 
-      user, 
-      profile 
-    };
+    if (!user) {
+      console.log('No authenticated user found');
+      return null;
+    }
+    
+    console.log('Current user retrieved:', user.id);
+    
+    // Get user profile with retry mechanism
+    const maxRetries = 2;
+    let retryCount = 0;
+    let profile = null;
+    let profileError = null;
+    
+    while (retryCount <= maxRetries) {
+      try {
+        console.log(`Fetching profile for user ${user.id}, attempt ${retryCount + 1}`);
+        const { data, error } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+        
+        if (error) {
+          profileError = error;
+          console.error(`Error getting user profile (attempt ${retryCount + 1}):`, error);
+        } else if (data) {
+          profile = data;
+          console.log('User profile successfully retrieved:', {
+            id: data.id,
+            name: data.name,
+            profile_image_url: data.profile_image_url ? 'exists' : 'none'
+          });
+          break; // Exit the retry loop if successful
+        }
+      } catch (err) {
+        console.error(`Unexpected error fetching profile (attempt ${retryCount + 1}):`, err);
+      }
+      
+      retryCount++;
+      if (retryCount <= maxRetries) {
+        // Wait before retrying (exponential backoff)
+        await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+      }
+    }
+    
+    // If profile not found after retries, try to create it
+    if (!profile && profileError && profileError.code === 'PGRST116') {
+      console.log('User exists in auth but not in database, attempting to create profile');
+      
+      try {
+        // Generate a roll number
+        const rollNumber = Math.floor(100000 + Math.random() * 900000).toString();
+        
+        // Create basic profile from auth data
+        const profileData = {
+          id: user.id,
+          email: user.email,
+          name: user.user_metadata?.name || 'User',
+          role: user.user_metadata?.role || 'deaf',
+          roll_number: rollNumber,
+          email_confirmed: user.user_metadata?.email_verified || false,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+        
+        console.log('Creating missing user profile with data:', profileData);
+        
+        // Create user profile in database using admin client (bypasses RLS)
+        const { error: createError } = await supabaseAdmin
+          .from('users')
+          .upsert([profileData]);
+          
+        if (createError) {
+          console.error('Error creating missing user profile:', createError);
+          return { user, profile: null };
+        }
+        
+        // Fetch the newly created profile
+        const { data: newProfile, error: fetchError } = await supabaseAdmin
+          .from('users')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+          
+        if (fetchError) {
+          console.error('Error fetching newly created profile:', fetchError);
+          return { user, profile: null };
+        }
+        
+        console.log('Successfully created and retrieved missing user profile:', newProfile);
+        return { user, profile: newProfile };
+      } catch (createError) {
+        console.error('Error recovering user profile:', createError);
+        return { user, profile: null };
+      }
+    }
+    
+    // Return both user and profile (or null for profile if not found)
+    const result = { user, profile };
+    console.log('Returning user data from getCurrentUser:', { 
+      user: user.id, 
+      profile: profile ? 'exists' : 'null'
+    });
+    return result;
   } catch (error) {
-    console.error('Error getting current user:', error);
+    console.error('Unexpected error in getCurrentUser:', error);
     return null;
   }
 };
@@ -553,26 +594,56 @@ export const deleteUnconfirmedUser = async (userId: string) => {
 // Update user profile
 export const updateUserProfile = async (userId: string, profileData: Partial<UserSignupData>) => {
   try {
-    const { error } = await supabase
-      .from('users')
-      .update({
-        name: profileData.name,
-        age: profileData.age,
-        proficiency: profileData.proficiency,
-        issues: profileData.issues,
-        illness_stage: profileData.illnessStage,
-        child_roll_number: profileData.childRollNumber,
-        relationship: profileData.relationship,
-        purpose: profileData.purpose,
-        subjects: profileData.subjects,
-        teaching_purpose: profileData.teachingPurpose,
-        updated_at: new Date(),
-      })
-      .eq('id', userId);
-      
-    if (error) throw error;
+    console.log('Updating user profile in database for user:', userId);
+    console.log('Profile data to update:', JSON.stringify(profileData, null, 2));
     
-    return true;
+    // First, get the current profile to know what we're working with
+    const { data: currentProfile, error: fetchError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', userId)
+      .single();
+      
+    if (fetchError) {
+      console.error('Error fetching current profile before update:', fetchError);
+    } else {
+      console.log('Current profile before update:', currentProfile);
+    }
+    
+    // Create an update object with only fields that are provided
+    const updateObject: any = { 
+      updated_at: new Date().toISOString()
+    };
+    
+    // Only include fields that are explicitly provided in profileData
+    if (profileData.name !== undefined) updateObject.name = profileData.name;
+    if (profileData.age !== undefined) updateObject.age = profileData.age;
+    if (profileData.profile_image_url !== undefined) updateObject.profile_image_url = profileData.profile_image_url;
+    if (profileData.proficiency !== undefined) updateObject.proficiency = profileData.proficiency;
+    if (profileData.issues !== undefined) updateObject.issues = profileData.issues;
+    if (profileData.illnessStage !== undefined) updateObject.illness_stage = profileData.illnessStage;
+    if (profileData.childRollNumber !== undefined) updateObject.child_roll_number = profileData.childRollNumber;
+    if (profileData.relationship !== undefined) updateObject.relationship = profileData.relationship;
+    if (profileData.purpose !== undefined) updateObject.purpose = profileData.purpose;
+    if (profileData.subjects !== undefined) updateObject.subjects = profileData.subjects;
+    if (profileData.teachingPurpose !== undefined) updateObject.teaching_purpose = profileData.teachingPurpose;
+    
+    console.log('Update object to be sent to database:', updateObject);
+    
+    const { data, error } = await supabase
+      .from('users')
+      .update(updateObject)
+      .eq('id', userId)
+      .select('*')
+      .single();
+      
+    if (error) {
+      console.error('Error updating user profile in database:', error);
+      throw error;
+    }
+    
+    console.log('Profile updated successfully, new profile data:', data);
+    return data;
   } catch (error) {
     console.error('Error updating user profile:', error);
     throw error;

@@ -106,18 +106,23 @@ const LectureDetailScreen = ({ route, navigation }: LectureDetailScreenProps) =>
   const { theme, isDarkMode } = useTheme();
   const isFocused = useIsFocused();
   
-  // Updated code to hide the bottom tab when viewing lecture detail
+  // Fix to hide bottom tab when viewing lecture detail
   useLayoutEffect(() => {
-    if (isFocused) {
-      navigation.getParent()?.setOptions({
+    // Store the original tab bar style
+    const parentNavigation = navigation.getParent();
+    
+    if (isFocused && parentNavigation) {
+      // Hide the tab bar
+      parentNavigation.setOptions({
         tabBarStyle: { display: 'none' }
       });
     }
     
     return () => {
-      if (!isFocused) {
-        navigation.getParent()?.setOptions({
-          tabBarStyle: { 
+      // Only restore if we're really unfocused
+      if (!isFocused && parentNavigation) {
+        parentNavigation.setOptions({
+          tabBarStyle: {
             display: 'flex',
             backgroundColor: isDarkMode ? '#1E1E1E' : '#FFFFFF',
             borderTopColor: isDarkMode ? '#333333' : '#EEEEEE' 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useLayoutEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,60 +8,172 @@ import {
   TouchableOpacity,
   Switch,
   Dimensions,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import LinearGradient from 'react-native-linear-gradient';
-import { useNavigation, useIsFocused } from '@react-navigation/native';
+import { useNavigation, useIsFocused, CommonActions } from '@react-navigation/native';
 import { HomeScreenProps } from '../types/navigation';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { scale, verticalScale } from '../utils/responsive';
+import EditProfileModal from '../components/profile/EditProfileModal';
 
 const { width } = Dimensions.get('window');
 
 const ProfileScreen = ({ navigation }: HomeScreenProps) => {
   const [notifications, setNotifications] = useState(true);
   const [soundEffects, setSoundEffects] = useState(true);
+  const [showEditProfileModal, setShowEditProfileModal] = useState(false);
   
   // Connect to the theme context
   const { theme, isDarkMode, toggleTheme } = useTheme();
-  const { user, profile, signOut } = useAuth();
+  const { user, profile, signOut, refreshProfile } = useAuth();
   
-  // Add code to hide the bottom tab when viewing profile
+  // Fix to hide bottom tab when viewing profile
   const isFocused = useIsFocused();
+  const justFocused = useRef(false);
+  
+  // Force immediate refresh when returning to this screen
+  useEffect(() => {
+    if (isFocused && refreshProfile) {
+      console.log('ProfileScreen focused, refreshing profile data');
+      console.log('Current profile state before refresh:', profile);
+      // Force refresh on focus
+      refreshProfile()
+        .then(() => {
+          console.log('Profile refresh completed in ProfileScreen');
+          console.log('Updated profile state after refresh:', profile);
+        })
+        .catch(error => {
+          console.error('Error refreshing profile data:', error);
+        });
+    }
+  }, [isFocused]);
+  
+  // Update userData whenever profile changes
+  useEffect(() => {
+    console.log('ProfileScreen profile effect triggered');
+    console.log('Current profile state in effect:', profile);
+    
+    // Handle case where profile might be an array
+    const profileData = Array.isArray(profile) ? profile[0] : profile;
+    
+    if (profileData) {
+      console.log('Profile data updated in ProfileScreen:', {
+        name: profileData.name, 
+        profile_image_url: profileData.profile_image_url,
+        id: profileData.id
+      });
+    } else {
+      console.log('No profile data available in ProfileScreen');
+    }
+  }, [profile]);
   
   useLayoutEffect(() => {
-    if (isFocused) {
-      navigation.getParent()?.setOptions({
+    // Store the original tab bar style
+    const parentNavigation = navigation.getParent();
+    
+    if (isFocused && parentNavigation) {
+      // Hide the tab bar
+      parentNavigation.setOptions({
         tabBarStyle: { display: 'none' }
       });
     }
     
     return () => {
-      navigation.getParent()?.setOptions({
-        tabBarStyle: undefined
-      });
+      // Only restore if we're really unfocused
+      if (!isFocused && parentNavigation) {
+        parentNavigation.setOptions({
+          tabBarStyle: {
+            display: 'flex',
+            backgroundColor: isDarkMode ? '#1E1E1E' : '#FFFFFF',
+            borderTopColor: isDarkMode ? '#333333' : '#EEEEEE' 
+          }
+        });
+      }
     };
-  }, [navigation, isFocused]);
+  }, [navigation, isFocused, isDarkMode]);
   
-  const userData = {
-    name: profile?.name || user?.user_metadata?.name || 'User',
-    email: profile?.email || user?.email || 'user@example.com',
-    level: profile?.level || 5,
-    xp: profile?.xp || 750,
-    nextLevelXp: profile?.next_level_xp || 1000,
-    achievements: profile?.achievements_count || 12,
-    totalCompletedLessons: profile?.completed_lessons_count || 24,
-    totalGamesPlayed: profile?.games_played_count || 45,
-  };
+  // Create userData object with proper logging
+  const userData = React.useMemo(() => {
+    console.log('Building userData in ProfileScreen');
+    console.log('Current profile for userData:', profile);
+    
+    // Handle case where profile might be an array
+    const profileData = Array.isArray(profile) ? profile[0] : profile;
+    
+    if (!profileData) {
+      console.log('No valid profile data available');
+      return {
+        name: user?.user_metadata?.name || 'User',
+        email: user?.email || 'user@example.com',
+        level: 5,
+        xp: 750,
+        nextLevelXp: 1000,
+        achievements: 12,
+        totalCompletedLessons: 24,
+        totalGamesPlayed: 45,
+        profileImage: null,
+      };
+    }
+    
+    const data = {
+      name: profileData.name || user?.user_metadata?.name || 'User',
+      email: profileData.email || user?.email || 'user@example.com',
+      level: profileData.level || 5,
+      xp: profileData.xp || 750,
+      nextLevelXp: profileData.next_level_xp || 1000,
+      achievements: profileData.achievements_count || 12,
+      totalCompletedLessons: profileData.completed_lessons_count || 24,
+      totalGamesPlayed: profileData.games_played_count || 45,
+      profileImage: profileData.profile_image_url || null,
+    };
+    
+    console.log('Built userData:', data);
+    
+    return data;
+  }, [profile, user]);
 
   const toggleNotifications = () => setNotifications(!notifications);
   const toggleSoundEffects = () => setSoundEffects(!soundEffects);
 
   const handleLogout = async () => {
-    // Clear user data and navigate to Auth screen
-    await signOut();
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel'
+        },
+        {
+          text: 'Logout',
+          onPress: async () => {
+            try {
+              const success = await signOut();
+              if (success) {
+                // Use CommonActions to reset navigation to Auth screen
+                navigation.dispatch(
+                  CommonActions.reset({
+                    index: 0,
+                    routes: [{ name: 'Auth' as any }],
+                  })
+                );
+              }
+            } catch (error) {
+              console.error('Logout error:', error);
+            }
+          },
+          style: 'destructive'
+        }
+      ]
+    );
+  };
+
+  const navigateToChangePassword = () => {
+    navigation.navigate('ChangePassword' as any);
   };
 
   return (
@@ -71,17 +183,26 @@ const ProfileScreen = ({ navigation }: HomeScreenProps) => {
           <Icon name="arrow-left" size={24} color={theme.colors.primary} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: theme.colors.text }]}>My Profile</Text>
-        <TouchableOpacity style={[styles.editButton, { backgroundColor: isDarkMode ? '#333333' : '#F0E6FF' }]}>
+        <TouchableOpacity 
+          style={[styles.editButton, { backgroundColor: isDarkMode ? '#333333' : '#F0E6FF' }]}
+          onPress={() => setShowEditProfileModal(true)}
+        >
           <Icon name="pencil" size={20} color={theme.colors.primary} />
         </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={[styles.profileSection, { borderBottomColor: isDarkMode ? '#333333' : '#EEEEEE' }]}>
-          <Image
-            source={require('../assets/images/placeholder-avatar.png')}
-            style={styles.profileImage}
-          />
+          {userData.profileImage ? (
+            <Image
+              source={{ uri: userData.profileImage }}
+              style={styles.profileImage}
+            />
+          ) : (
+            <View style={[styles.defaultProfileImage, { backgroundColor: isDarkMode ? '#333333' : '#F0E6FF' }]}>
+              <Icon name="account" size={50} color={theme.colors.primary} />
+            </View>
+          )}
           <Text style={[styles.userName, { color: theme.colors.text }]}>{userData.name}</Text>
           <Text style={[styles.userEmail, { color: theme.colors.textSecondary }]}>{userData.email}</Text>
 
@@ -182,6 +303,16 @@ const ProfileScreen = ({ navigation }: HomeScreenProps) => {
             </View>
             <Icon name="chevron-right" size={20} color={isDarkMode ? '#888888' : '#CCCCCC'} />
           </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.accountItem, { borderBottomColor: isDarkMode ? '#333333' : '#EEEEEE' }]}
+            onPress={navigateToChangePassword}
+          >
+            <View style={styles.accountItemLeft}>
+              <Icon name="lock-reset" size={24} color={theme.colors.primary} />
+              <Text style={[styles.accountItemText, { color: theme.colors.text }]}>Change Password</Text>
+            </View>
+            <Icon name="chevron-right" size={20} color={isDarkMode ? '#888888' : '#CCCCCC'} />
+          </TouchableOpacity>
           <TouchableOpacity style={[styles.accountItem, { borderBottomColor: isDarkMode ? '#333333' : '#EEEEEE' }]}>
             <View style={styles.accountItemLeft}>
               <Icon name="help-circle" size={24} color={theme.colors.primary} />
@@ -198,18 +329,25 @@ const ProfileScreen = ({ navigation }: HomeScreenProps) => {
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <LinearGradient
-            colors={['#FF6A88', '#FF99AC']}
-            style={styles.logoutGradient}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-          >
+        <TouchableOpacity 
+          style={[
+            styles.logoutButton, 
+            { backgroundColor: isDarkMode ? '#FF6A88' : '#FF6A88' }
+          ]} 
+          onPress={handleLogout}
+        >
+          <View style={styles.logoutContent}>
             <Icon name="logout" size={20} color="#FFFFFF" />
             <Text style={styles.logoutText}>Logout</Text>
-          </LinearGradient>
+          </View>
         </TouchableOpacity>
       </ScrollView>
+      
+      {/* Profile Edit Modal */}
+      <EditProfileModal 
+        visible={showEditProfileModal}
+        onClose={() => setShowEditProfileModal(false)}
+      />
     </SafeAreaView>
   );
 };
@@ -260,6 +398,14 @@ const styles = StyleSheet.create({
     height: 100,
     borderRadius: 50,
     marginBottom: 15,
+  },
+  defaultProfileImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    marginBottom: 15,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   userName: {
     fontSize: 22,
@@ -383,12 +529,12 @@ const styles = StyleSheet.create({
     marginBottom: 30,
     borderRadius: 25,
     overflow: 'hidden',
+    paddingVertical: 12,
   },
-  logoutGradient: {
+  logoutContent: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 12,
   },
   logoutText: {
     color: '#FFFFFF',
