@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import {
   View,
   Text,
@@ -15,7 +15,7 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import LinearGradient from 'react-native-linear-gradient';
 import { useTheme } from '../context/ThemeContext';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { RouteProp } from '@react-navigation/native';
+import { RouteProp, useIsFocused } from '@react-navigation/native';
 import { GamesStackParamList } from '../types/navigation';
 
 const { width } = Dimensions.get('window');
@@ -156,6 +156,23 @@ const MemoryMatchGame = ({ navigation, route }: MemoryMatchGameProps) => {
   
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const sequenceTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Add code to hide the bottom tab when in the game
+  const isFocused = useIsFocused();
+  
+  useLayoutEffect(() => {
+    if (isFocused) {
+      navigation.getParent()?.setOptions({
+        tabBarStyle: { display: 'none' }
+      });
+    }
+    
+    return () => {
+      navigation.getParent()?.setOptions({
+        tabBarStyle: undefined
+      });
+    };
+  }, [navigation, isFocused]);
 
   // Initialize the game with shuffled cards
   useEffect(() => {

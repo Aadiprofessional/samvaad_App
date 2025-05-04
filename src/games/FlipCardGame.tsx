@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import {
   View,
   Text,
@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import LinearGradient from 'react-native-linear-gradient';
 import { useTheme } from '../context/ThemeContext';
+import { useIsFocused } from '@react-navigation/native';
 
 const { width, height } = Dimensions.get('window');
 
@@ -82,6 +83,23 @@ const FlipCardGame = ({ navigation, route }: NavigationProps) => {
   const [selectedCards, setSelectedCards] = useState<number[]>([]);
   const [intervalId, setIntervalId] = useState<NodeJS.Timeout | null>(null);
   const flipAnimations = useRef<{ [key: number]: Animated.Value }>({}).current;
+
+  // Add code to hide the bottom tab when in the game
+  const isFocused = useIsFocused();
+  
+  useLayoutEffect(() => {
+    if (isFocused) {
+      navigation.getParent()?.setOptions({
+        tabBarStyle: { display: 'none' }
+      });
+    }
+    
+    return () => {
+      navigation.getParent()?.setOptions({
+        tabBarStyle: undefined
+      });
+    };
+  }, [navigation, isFocused]);
 
   // Handle back button press
   useEffect(() => {

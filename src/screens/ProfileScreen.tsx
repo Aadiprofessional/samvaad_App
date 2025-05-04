@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect } from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import LinearGradient from 'react-native-linear-gradient';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useIsFocused } from '@react-navigation/native';
 import { HomeScreenProps } from '../types/navigation';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
@@ -27,6 +27,23 @@ const ProfileScreen = ({ navigation }: HomeScreenProps) => {
   // Connect to the theme context
   const { theme, isDarkMode, toggleTheme } = useTheme();
   const { user, profile, signOut } = useAuth();
+  
+  // Add code to hide the bottom tab when viewing profile
+  const isFocused = useIsFocused();
+  
+  useLayoutEffect(() => {
+    if (isFocused) {
+      navigation.getParent()?.setOptions({
+        tabBarStyle: { display: 'none' }
+      });
+    }
+    
+    return () => {
+      navigation.getParent()?.setOptions({
+        tabBarStyle: undefined
+      });
+    };
+  }, [navigation, isFocused]);
   
   const userData = {
     name: profile?.name || user?.user_metadata?.name || 'User',

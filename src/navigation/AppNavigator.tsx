@@ -81,6 +81,17 @@ const LeaderboardStack = () => (
 const AppNavigator = () => {
   const { theme, isDarkMode } = useTheme();
   
+  const tabBarStyle = {
+    backgroundColor: isDarkMode ? '#1E1E1E' : '#F5F5F5',
+    paddingBottom: Platform.OS === 'ios' ? scale(20) : scale(5),
+    paddingTop: scale(5),
+    height: Platform.OS === 'ios' ? scale(80) : scale(60),
+    borderTopWidth: 0,
+    elevation: 0,
+    shadowOpacity: 0,
+    borderTopColor: 'transparent'
+  };
+  
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -104,16 +115,7 @@ const AppNavigator = () => {
         tabBarActiveTintColor: theme.colors.primary,
         tabBarInactiveTintColor: isDarkMode ? '#999999' : '#888888',
         headerShown: false,
-        tabBarStyle: {
-          backgroundColor: isDarkMode ? '#1E1E1E' : '#F5F5F5', // Light gray in light mode
-          paddingBottom: Platform.OS === 'ios' ? scale(20) : scale(5),
-          paddingTop: scale(5),
-          height: Platform.OS === 'ios' ? scale(80) : scale(60),
-          borderTopWidth: 0,
-          elevation: 0,
-          shadowOpacity: 0,
-          borderTopColor: 'transparent'
-        },
+        tabBarStyle: tabBarStyle,
         tabBarLabelStyle: {
           fontSize: 12,
           fontWeight: '500',

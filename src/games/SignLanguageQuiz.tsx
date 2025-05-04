@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import LinearGradient from 'react-native-linear-gradient';
 import { SignLanguageQuizProps } from '../types/navigation';
 import { useTheme } from '../context/ThemeContext';
+import { useIsFocused } from '@react-navigation/native';
 
 // Quiz question type definition
 type QuizQuestion = {
@@ -268,6 +269,23 @@ const SignLanguageQuiz: React.FC<SignLanguageQuizProps> = ({ navigation, route }
   const [timeLeft, setTimeLeft] = useState(15);
   const [quizCompleted, setQuizCompleted] = useState(false);
   const [quizStarted, setQuizStarted] = useState(false);
+
+  // Add code to hide the bottom tab when in the game
+  const isFocused = useIsFocused();
+  
+  useLayoutEffect(() => {
+    if (isFocused) {
+      navigation.getParent()?.setOptions({
+        tabBarStyle: { display: 'none' }
+      });
+    }
+    
+    return () => {
+      navigation.getParent()?.setOptions({
+        tabBarStyle: undefined
+      });
+    };
+  }, [navigation, isFocused]);
 
   // Initialize the quiz
   useEffect(() => {

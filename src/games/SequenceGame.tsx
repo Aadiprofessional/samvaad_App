@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { SequenceGameProps } from '../types/navigation';
 import { useTheme } from '../context/ThemeContext';
+import { useIsFocused } from '@react-navigation/native';
 
 const { width } = Dimensions.get('window');
 const GRID_SIZE = 3;
@@ -39,6 +40,23 @@ const SequenceGame = ({ navigation }: SequenceGameProps) => {
   
   const showingRef = useRef<NodeJS.Timeout | null>(null);
   const sequenceRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Add code to hide the bottom tab when in the game
+  const isFocused = useIsFocused();
+  
+  useLayoutEffect(() => {
+    if (isFocused) {
+      navigation.getParent()?.setOptions({
+        tabBarStyle: { display: 'none' }
+      });
+    }
+    
+    return () => {
+      navigation.getParent()?.setOptions({
+        tabBarStyle: undefined
+      });
+    };
+  }, [navigation, isFocused]);
   
   // Initialize cards
   useEffect(() => {
