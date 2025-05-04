@@ -15,6 +15,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import { StudyScreenProps } from '../types/navigation';
 import { useTheme } from '../context/ThemeContext';
 import { useIsFocused } from '@react-navigation/native';
+import { manageTabBarVisibility, getBottomTabBarSpace } from '../utils/tabBarStyles';
 
 type TabsType = 'courses' | 'tests' | 'certificates';
 
@@ -196,18 +197,8 @@ const StudyScreen = ({ navigation }: StudyScreenProps) => {
   const isFocused = useIsFocused();
   
   useLayoutEffect(() => {
-    if (isFocused) {
-      navigation.getParent()?.setOptions({
-        tabBarStyle: { display: 'flex' }
-      });
-    }
-    
-    return () => {
-      navigation.getParent()?.setOptions({
-        tabBarStyle: undefined
-      });
-    };
-  }, [navigation, isFocused]);
+    return manageTabBarVisibility(navigation, isFocused, isDarkMode, false);
+  }, [navigation, isFocused, isDarkMode]);
 
   const renderCourseItem = ({ item }: { item: CourseType }) => (
     <TouchableOpacity
@@ -368,36 +359,21 @@ const StudyScreen = ({ navigation }: StudyScreenProps) => {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={['top']}>
       <View style={styles.header}>
-        <Text style={[styles.screenTitle, { color: theme.colors.text }]}>Study</Text>
+        <Text style={[styles.screenTitle, { color: theme.colors.text }]}>Learning Center</Text>
         <TouchableOpacity style={[styles.searchButton, { backgroundColor: isDarkMode ? '#333333' : '#F0E6FF' }]}>
           <Icon name="magnify" size={24} color={theme.colors.primary} />
         </TouchableOpacity>
       </View>
-
-      <View style={styles.featuredSection}>
-        <View style={[styles.featuredCard, { backgroundColor: theme.colors.primary }]}>
-          <View style={styles.featuredContent}>
-            <View style={[styles.featuredBadge, { backgroundColor: isDarkMode ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.2)' }]}>
-              <Text style={styles.featuredBadgeText}>NEW COURSE</Text>
-            </View>
-            
-            <Text style={styles.featuredTitle} numberOfLines={2} ellipsizeMode="tail">
-              Master Sign Language in 12 Weeks
-            </Text>
-            
-            <Text style={styles.featuredDescription} numberOfLines={2} ellipsizeMode="tail">
-              A comprehensive course for all skill levels
-            </Text>
-            
-            <TouchableOpacity style={styles.featuredButton}>
-              <Text style={styles.featuredButtonText}>
-                Enroll Now
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+      
+      <View style={styles.welcomeSection}>
+        <Text style={[styles.welcomeTitle, { color: theme.colors.text }]}>
+          Welcome back to your learning journey!
+        </Text>
+        <Text style={[styles.welcomeText, { color: theme.colors.textSecondary }]}>
+          Continue where you left off or explore new courses.
+        </Text>
       </View>
-
+      
       <View style={[styles.tabsContainer, { borderBottomColor: isDarkMode ? '#333333' : '#EEEEEE' }]}>
         <TouchableOpacity
           style={[styles.tab, activeTab === 'courses' && [styles.activeTab, { borderBottomColor: theme.colors.primary }]]}
@@ -406,14 +382,14 @@ const StudyScreen = ({ navigation }: StudyScreenProps) => {
           <Text
             style={[
               styles.tabText,
-              { color: isDarkMode ? '#9E9E9E' : '#9E9E9E' },
-              activeTab === 'courses' && [styles.activeTabText, { color: theme.colors.primary }],
+              { color: isDarkMode ? '#999999' : '#666666' },
+              activeTab === 'courses' && [styles.activeTabText, { color: theme.colors.primary }]
             ]}
           >
             Courses
           </Text>
         </TouchableOpacity>
-
+        
         <TouchableOpacity
           style={[styles.tab, activeTab === 'tests' && [styles.activeTab, { borderBottomColor: theme.colors.primary }]]}
           onPress={() => setActiveTab('tests')}
@@ -421,14 +397,14 @@ const StudyScreen = ({ navigation }: StudyScreenProps) => {
           <Text
             style={[
               styles.tabText,
-              { color: isDarkMode ? '#9E9E9E' : '#9E9E9E' },
-              activeTab === 'tests' && [styles.activeTabText, { color: theme.colors.primary }],
+              { color: isDarkMode ? '#999999' : '#666666' },
+              activeTab === 'tests' && [styles.activeTabText, { color: theme.colors.primary }]
             ]}
           >
             Tests
           </Text>
         </TouchableOpacity>
-
+        
         <TouchableOpacity
           style={[styles.tab, activeTab === 'certificates' && [styles.activeTab, { borderBottomColor: theme.colors.primary }]]}
           onPress={() => setActiveTab('certificates')}
@@ -436,41 +412,41 @@ const StudyScreen = ({ navigation }: StudyScreenProps) => {
           <Text
             style={[
               styles.tabText,
-              { color: isDarkMode ? '#9E9E9E' : '#9E9E9E' },
-              activeTab === 'certificates' && [styles.activeTabText, { color: theme.colors.primary }],
+              { color: isDarkMode ? '#999999' : '#666666' },
+              activeTab === 'certificates' && [styles.activeTabText, { color: theme.colors.primary }]
             ]}
           >
             Certificates
           </Text>
         </TouchableOpacity>
       </View>
-
+      
       {activeTab === 'courses' && (
         <FlatList
           data={courses}
           renderItem={renderCourseItem}
           keyExtractor={(item) => item.id.toString()}
-          contentContainerStyle={styles.listContainer}
+          contentContainerStyle={[styles.listContainer, { paddingBottom: getBottomTabBarSpace() }]}
           showsVerticalScrollIndicator={false}
         />
       )}
-
+      
       {activeTab === 'tests' && (
         <FlatList
           data={tests}
           renderItem={renderTestItem}
           keyExtractor={(item) => item.id.toString()}
-          contentContainerStyle={styles.listContainer}
+          contentContainerStyle={[styles.listContainer, { paddingBottom: getBottomTabBarSpace() }]}
           showsVerticalScrollIndicator={false}
         />
       )}
-
+      
       {activeTab === 'certificates' && (
         <FlatList
           data={certificates}
           renderItem={renderCertificateItem}
           keyExtractor={(item) => item.id.toString()}
-          contentContainerStyle={styles.listContainer}
+          contentContainerStyle={[styles.listContainer, { paddingBottom: getBottomTabBarSpace() }]}
           showsVerticalScrollIndicator={false}
         />
       )}
@@ -500,39 +476,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  featuredSection: {
+  welcomeSection: {
     paddingHorizontal: 20,
     marginBottom: 25,
   },
-  featuredCard: {
-    height: 220,
-    borderRadius: 16,
-    overflow: 'hidden',
-    paddingHorizontal: 24,
-    paddingVertical: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  featuredContent: {
-    flex: 1,
-    justifyContent: 'space-between',
-  },
-  featuredBadge: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-    marginBottom: 10,
-  },
-  featuredBadgeText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  featuredTitle: {
+  welcomeTitle: {
     fontSize: 26,
     fontWeight: 'bold',
     color: '#FFFFFF',
@@ -540,24 +488,11 @@ const styles = StyleSheet.create({
     lineHeight: 32,
     maxWidth: '90%',
   },
-  featuredDescription: {
+  welcomeText: {
     fontSize: 16,
     color: 'rgba(255, 255, 255, 0.9)',
     marginBottom: 20,
     maxWidth: '90%',
-  },
-  featuredButton: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 30,
-    backgroundColor: '#FFFFFF',
-    marginTop: -15,
-  },
-  featuredButtonText: {
-    fontWeight: 'bold',
-    fontSize: 16,
-    color: '#6200EE',
   },
   tabsContainer: {
     flexDirection: 'row',

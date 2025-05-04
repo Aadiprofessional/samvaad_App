@@ -17,6 +17,7 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import LinearGradient from 'react-native-linear-gradient';
 import { useTheme } from '../context/ThemeContext';
 import { useIsFocused } from '@react-navigation/native';
+import { getHiddenTabBarStyle, getDefaultTabBarStyle, getBottomTabBarSpace, manageTabBarVisibility } from '../utils/tabBarStyles';
 
 const { width, height } = Dimensions.get('window');
 
@@ -88,18 +89,9 @@ const FlipCardGame = ({ navigation, route }: NavigationProps) => {
   const isFocused = useIsFocused();
   
   useLayoutEffect(() => {
-    if (isFocused) {
-      navigation.getParent()?.setOptions({
-        tabBarStyle: { display: 'none' }
-      });
-    }
-    
-    return () => {
-      navigation.getParent()?.setOptions({
-        tabBarStyle: undefined
-      });
-    };
-  }, [navigation, isFocused]);
+    // Use the utility function to hide tab bar during game
+    return manageTabBarVisibility(navigation, isFocused, isDarkMode, true);
+  }, [navigation, isFocused, isDarkMode]);
 
   // Handle back button press
   useEffect(() => {
@@ -450,7 +442,12 @@ const FlipCardGame = ({ navigation, route }: NavigationProps) => {
             </View>
           </View>
 
-          <ScrollView contentContainerStyle={styles.gameContent}>
+          <ScrollView 
+            contentContainerStyle={[
+              styles.gameContent,
+              { paddingBottom: Platform.OS === 'ios' ? 34 : 16 }
+            ]}
+          >
             <View style={styles.cardsContainer}>
               {cards.map((card, index) => renderCard(card, index))}
             </View>

@@ -84,6 +84,12 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0"
+        
+        // Enable camera support
+        missingDimensionStrategy 'react-native-camera', 'general'
+        
+        // Required for react-native-vector-icons
+        vectorDrawables.useSupportLibrary = true
     }
     signingConfigs {
         debug {
@@ -91,6 +97,12 @@ android {
             storePassword 'android'
             keyAlias 'androiddebugkey'
             keyPassword 'android'
+        }
+        release {
+            storeFile file('samvaad.keystore')
+            storePassword 'samvaad'
+            keyAlias 'samvaad-alias'
+            keyPassword 'samvaad'
         }
     }
     buildTypes {
@@ -100,10 +112,19 @@ android {
         release {
             // Caution! In production, you need to generate your own keystore file.
             // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
+            signingConfig signingConfigs.release
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }
+    }
+    
+    // Required for react-native-vector-icons
+    packagingOptions {
+        pickFirst 'lib/x86/libc++_shared.so'
+        pickFirst 'lib/x86_64/libc++_shared.so'
+        pickFirst 'lib/arm64-v8a/libc++_shared.so'
+        pickFirst 'lib/armeabi-v7a/libc++_shared.so'
+        pickFirst 'lib/armeabi/libc++_shared.so'
     }
 }
 
@@ -116,4 +137,10 @@ dependencies {
     } else {
         implementation jscFlavor
     }
+    
+    // Add support for vector icons
+    implementation project(':react-native-vector-icons')
+    
+    // Camera dependencies
+    implementation project(':react-native-camera')
 }

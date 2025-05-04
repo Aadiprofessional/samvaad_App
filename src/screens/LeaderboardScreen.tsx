@@ -15,6 +15,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import { useTheme } from '../context/ThemeContext';
 import { useIsFocused } from '@react-navigation/native';
 import { LeaderboardScreenProps } from '../types/navigation';
+import { getVisibleTabBarStyle, getDefaultTabBarStyle, getBottomTabBarSpace, manageTabBarVisibility } from '../utils/tabBarStyles';
 
 const { width } = Dimensions.get('window');
 
@@ -267,20 +268,11 @@ const LeaderboardScreen = ({ navigation }: LeaderboardScreenProps) => {
   const { theme, isDarkMode } = useTheme();
   const isFocused = useIsFocused();
   
-  // Add code to ensure bottom tab is visible
+  // Update the useLayoutEffect block
   useLayoutEffect(() => {
-    if (isFocused) {
-      navigation.getParent()?.setOptions({
-        tabBarStyle: { display: 'flex' }
-      });
-    }
-    
-    return () => {
-      navigation.getParent()?.setOptions({
-        tabBarStyle: undefined
-      });
-    };
-  }, [navigation, isFocused]);
+    // Use the utility function to ensure tab bar is visible
+    return manageTabBarVisibility(navigation, isFocused, isDarkMode, false);
+  }, [navigation, isFocused, isDarkMode]);
   
   // Current user - in a real app, this would come from an auth system
   const currentUser = {
@@ -612,7 +604,7 @@ const LeaderboardScreen = ({ navigation }: LeaderboardScreenProps) => {
           data={userRankings}
           renderItem={renderUserRankItem}
           keyExtractor={(item) => item.id.toString()}
-          contentContainerStyle={styles.listContainer}
+          contentContainerStyle={[styles.listContainer, { paddingBottom: getBottomTabBarSpace() }]}
           showsVerticalScrollIndicator={false}
         />
       )}
@@ -622,7 +614,7 @@ const LeaderboardScreen = ({ navigation }: LeaderboardScreenProps) => {
           data={gameStats}
           renderItem={renderGameStatItem}
           keyExtractor={(item) => item.id.toString()}
-          contentContainerStyle={styles.listContainer}
+          contentContainerStyle={[styles.listContainer, { paddingBottom: getBottomTabBarSpace() }]}
           showsVerticalScrollIndicator={false}
         />
       )}
@@ -632,7 +624,7 @@ const LeaderboardScreen = ({ navigation }: LeaderboardScreenProps) => {
           data={achievements}
           renderItem={renderAchievementItem}
           keyExtractor={(item) => item.id.toString()}
-          contentContainerStyle={styles.listContainer}
+          contentContainerStyle={[styles.listContainer, { paddingBottom: getBottomTabBarSpace() }]}
           showsVerticalScrollIndicator={false}
         />
       )}

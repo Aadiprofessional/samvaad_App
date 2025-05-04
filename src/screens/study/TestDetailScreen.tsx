@@ -15,6 +15,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import { TestDetailScreenProps } from '../../types/navigation';
 import { useTheme } from '../../context/ThemeContext';
 import { useIsFocused } from '@react-navigation/native';
+import { getHiddenTabBarStyle, getVisibleTabBarStyle, getBottomTabBarSpace, manageTabBarVisibility } from '../../utils/tabBarStyles';
 
 // Sample test data - this would come from an API in a real app
 const testData = {
@@ -51,30 +52,10 @@ const TestDetailScreen = ({ route, navigation }: TestDetailScreenProps) => {
   const { theme, isDarkMode } = useTheme();
   const isFocused = useIsFocused();
   
-  // Fix to hide bottom tab when viewing test detail
+  // Replace the existing useLayoutEffect block
   useLayoutEffect(() => {
-    // Store the original tab bar style
-    const parentNavigation = navigation.getParent();
-    
-    if (isFocused && parentNavigation) {
-      // Hide the tab bar
-      parentNavigation.setOptions({
-        tabBarStyle: { display: 'none' }
-      });
-    }
-    
-    return () => {
-      // Only restore if we're really unfocused
-      if (!isFocused && parentNavigation) {
-        parentNavigation.setOptions({
-          tabBarStyle: {
-            display: 'flex',
-            backgroundColor: isDarkMode ? '#1E1E1E' : '#FFFFFF',
-            borderTopColor: isDarkMode ? '#333333' : '#EEEEEE' 
-          }
-        });
-      }
-    };
+    // Use the utility function to hide tab bar consistently
+    return manageTabBarVisibility(navigation, isFocused, isDarkMode, true);
   }, [navigation, isFocused, isDarkMode]);
   
   // In a real app, we would fetch test data based on testId
@@ -102,7 +83,10 @@ const TestDetailScreen = ({ route, navigation }: TestDetailScreenProps) => {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={['top']}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: getHiddenTabBarStyle() ? 0 : getBottomTabBarSpace() }}
+      >
         <LinearGradient
           colors={[testData.color1, testData.color2]}
           style={styles.headerGradient}
@@ -293,7 +277,10 @@ const TestDetailScreen = ({ route, navigation }: TestDetailScreenProps) => {
         </View>
       </ScrollView>
       
-      <View style={[styles.footer, { backgroundColor: isDarkMode ? '#1E1E1E' : '#FFFFFF' }]}>
+      <View style={[styles.footer, { 
+        backgroundColor: isDarkMode ? '#1E1E1E' : '#FFFFFF',
+        paddingBottom: Platform.OS === 'ios' ? 34 : 16
+      }]}>
         <TouchableOpacity
           style={[styles.startButton, { backgroundColor: theme.colors.primary }]}
           onPress={handleStartTest}

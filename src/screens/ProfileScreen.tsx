@@ -19,6 +19,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { scale, verticalScale } from '../utils/responsive';
 import EditProfileModal from '../components/profile/EditProfileModal';
+import { getHiddenTabBarStyle, getVisibleTabBarStyle, manageTabBarVisibility } from '../utils/tabBarStyles';
 
 const { width } = Dimensions.get('window');
 
@@ -72,28 +73,8 @@ const ProfileScreen = ({ navigation }: HomeScreenProps) => {
   }, [profile]);
   
   useLayoutEffect(() => {
-    // Store the original tab bar style
-    const parentNavigation = navigation.getParent();
-    
-    if (isFocused && parentNavigation) {
-      // Hide the tab bar
-      parentNavigation.setOptions({
-        tabBarStyle: { display: 'none' }
-      });
-    }
-    
-    return () => {
-      // Only restore if we're really unfocused
-      if (!isFocused && parentNavigation) {
-        parentNavigation.setOptions({
-          tabBarStyle: {
-            display: 'flex',
-            backgroundColor: isDarkMode ? '#1E1E1E' : '#FFFFFF',
-            borderTopColor: isDarkMode ? '#333333' : '#EEEEEE' 
-          }
-        });
-      }
-    };
+    // Use the utility function for consistent tab bar handling
+    return manageTabBarVisibility(navigation, isFocused, isDarkMode, true);
   }, [navigation, isFocused, isDarkMode]);
   
   // Create userData object with proper logging

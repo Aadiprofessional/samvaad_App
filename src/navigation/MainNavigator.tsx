@@ -3,6 +3,7 @@ import { Platform } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../context/ThemeContext';
+import { getDefaultTabBarStyle } from '../utils/tabBarStyles';
 
 // Import screens
 import HomeScreen from '../screens/HomeScreen';
@@ -27,18 +28,18 @@ const MainNavigator = () => {
         headerShown: false,
         tabBarActiveTintColor: theme.primary,
         tabBarInactiveTintColor: theme.tabBarInactive,
-        tabBarStyle: {
-          backgroundColor: isDarkMode ? '#1E1E1E' : theme.cardBackground,
-          borderTopColor: theme.border,
-          height: Platform.OS === 'ios' ? 90 : 70,
-          paddingBottom: Platform.OS === 'ios' ? 25 : 10,
-          paddingTop: 5,
-        },
+        tabBarStyle: getDefaultTabBarStyle(isDarkMode),
         tabBarLabelStyle: {
           fontSize: 12,
           fontWeight: '500',
+          marginBottom: Platform.OS === 'ios' ? 8 : 4,
         },
+        tabBarHideOnKeyboard: true,
+        tabBarShowLabel: true,
+        lazy: false, // Ensures tab screens are ready to prevent flickering
       }}
+      safeAreaInsets={{ bottom: 0 }} // Override default safe area behavior
+      sceneContainerStyle={{ backgroundColor: 'transparent' }}
     >
       <Tab.Screen
         name="Home"

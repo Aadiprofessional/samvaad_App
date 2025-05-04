@@ -6,6 +6,7 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { Platform, View, StyleSheet } from 'react-native';
 import { scale } from '../utils/responsive';
 import { useTheme } from '../context/ThemeContext';
+import { getDefaultTabBarStyle } from '../utils/tabBarStyles';
 
 // Import screens
 import HomeScreen from '../screens/HomeScreen';
@@ -83,17 +84,6 @@ const LeaderboardStack = () => (
 const AppNavigator = () => {
   const { theme, isDarkMode } = useTheme();
   
-  const tabBarStyle = {
-    backgroundColor: isDarkMode ? '#1E1E1E' : '#F5F5F5',
-    paddingBottom: Platform.OS === 'ios' ? scale(20) : scale(5),
-    paddingTop: scale(5),
-    height: Platform.OS === 'ios' ? scale(80) : scale(60),
-    borderTopWidth: 0,
-    elevation: 0,
-    shadowOpacity: 0,
-    borderTopColor: 'transparent'
-  };
-  
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -117,16 +107,18 @@ const AppNavigator = () => {
         tabBarActiveTintColor: theme.colors.primary,
         tabBarInactiveTintColor: isDarkMode ? '#999999' : '#888888',
         headerShown: false,
-        tabBarStyle: tabBarStyle,
+        tabBarStyle: getDefaultTabBarStyle(isDarkMode),
         tabBarLabelStyle: {
           fontSize: 12,
           fontWeight: '500',
-          marginBottom: Platform.OS === 'ios' ? scale(5) : 0,
+          marginBottom: Platform.OS === 'ios' ? 8 : 4,
         },
-        tabBarBackground: () => (
-          <View style={[styles.tabBarBackground, { backgroundColor: isDarkMode ? '#1E1E1E' : '#F5F5F5' }]} />
-        ),
+        tabBarHideOnKeyboard: true,
+        tabBarShowLabel: true,
+        lazy: false, // Ensures tab screens are ready to prevent flickering
       })}
+      safeAreaInsets={{ bottom: 0 }} // Override default safe area behavior
+      sceneContainerStyle={{ backgroundColor: 'transparent' }}
       initialRouteName="Home"
     >
       <Tab.Screen name="Home" component={HomeStack} />

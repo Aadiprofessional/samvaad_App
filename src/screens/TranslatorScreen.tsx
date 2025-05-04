@@ -413,7 +413,7 @@ const TranslatorScreen = () => {
         style={[
           styles.tabButton,
           activeTab === 'translate' && styles.activeTabButton,
-          { backgroundColor: activeTab === 'translate' ? theme.colors.primary : isDarkMode ? '#1E1E1E' : '#F5F5F5' }
+          { backgroundColor: activeTab === 'translate' ? theme.colors.primary : isDarkMode ? '#1E1E1E' : '#F5F5F5', paddingVertical: 10 }
         ]}
         onPress={() => setActiveTab('translate')}
       >
@@ -761,14 +761,7 @@ const TranslatorScreen = () => {
   );
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={['top']}>
-      <View style={[styles.header, { borderBottomColor: isDarkMode ? '#333333' : '#EEEEEE' }]}>
-        <Text style={[styles.screenTitle, { color: theme.colors.text }]}>Sign Translator</Text>
-        <TouchableOpacity style={[styles.helpButton, { backgroundColor: isDarkMode ? '#333333' : '#F0E6FF' }]}>
-          <Icon name="help-circle-outline" size={24} color={theme.colors.primary} />
-        </TouchableOpacity>
-      </View>
-
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={['top', 'bottom']}>
       {renderTabButtons()}
 
       <View style={styles.content}>
@@ -807,8 +800,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingHorizontal: 15,
     paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#EEEEEE',
+ 
   },
   tabButton: {
     flex: 1,
@@ -900,6 +892,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     alignItems: 'center',
     paddingVertical: 10,
+    marginBottom: 30,
   },
   cameraButton: {
     width: 50,
@@ -939,6 +932,7 @@ const styles = StyleSheet.create({
   historyContainer: {
     flex: 1,
     padding: 20,
+    paddingBottom: 40,
   },
   historyLoader: {
     marginTop: 40,
@@ -1003,6 +997,7 @@ const styles = StyleSheet.create({
   learnContainer: {
     flex: 1,
     padding: 20,
+    paddingBottom: 40,
   },
   learnTitle: {
     fontSize: 20,
@@ -1059,7 +1054,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 20,
-    marginBottom: 20,
+    marginBottom: 60,
   },
   allSignsText: {
     color: '#FFFFFF',
