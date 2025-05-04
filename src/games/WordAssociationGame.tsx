@@ -12,6 +12,7 @@ import {
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { WordAssociationGameProps } from '../types/navigation';
+import { useTheme } from '../context/ThemeContext';
 
 type WordPairType = {
   id: number;
@@ -54,6 +55,7 @@ const generateWordPairs = () => {
 };
 
 const WordAssociationGame = ({ navigation, route }: WordAssociationGameProps) => {
+  const { theme, isDarkMode } = useTheme();
   const [wordPairs, setWordPairs] = useState<WordPairType[]>(generateWordPairs());
   const [currentPairIndex, setCurrentPairIndex] = useState(0);
   const [score, setScore] = useState(0);
@@ -154,123 +156,118 @@ const WordAssociationGame = ({ navigation, route }: WordAssociationGameProps) =>
   });
   
   return (
-    <SafeAreaView style={styles.container}>
-      <LinearGradient
-        colors={['#8A2387', '#E94057', '#F27121']}
-        style={styles.gradient}
-      >
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-          >
-            <Icon name="arrow-left" size={24} color="#FFFFFF" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Word Association</Text>
-          <View style={styles.timerContainer}>
-            <Icon name="clock-outline" size={20} color="#FFFFFF" />
-            <Text style={styles.timerText}>{formatTime(timeRemaining)}</Text>
-          </View>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <View style={[styles.header, { borderBottomColor: isDarkMode ? '#333333' : '#EEEEEE' }]}>
+        <TouchableOpacity 
+          onPress={() => navigation.goBack()} 
+          style={[styles.headerButton, { backgroundColor: isDarkMode ? '#333333' : '#F0E6FF' }]}
+        >
+          <Icon name="arrow-left" size={24} color={theme.colors.primary} />
+        </TouchableOpacity>
+        <Text style={[styles.headerTitle, { color: theme.colors.text }]}>Word Association</Text>
+        <View style={styles.timerContainer}>
+          <Icon name="clock-outline" size={20} color="#FFFFFF" />
+          <Text style={styles.timerText}>{formatTime(timeRemaining)}</Text>
         </View>
-        
-        <View style={styles.scoreContainer}>
-          <Text style={styles.scoreLabel}>Score</Text>
-          <Text style={styles.scoreValue}>{score}</Text>
+      </View>
+      
+      <View style={styles.scoreContainer}>
+        <Text style={styles.scoreLabel}>Score</Text>
+        <Text style={styles.scoreValue}>{score}</Text>
+      </View>
+      
+      <View style={styles.progressContainer}>
+        <View style={styles.progressBar}>
+          <View 
+            style={[
+              styles.progressFill, 
+              { width: `${((currentPairIndex) / wordPairs.length) * 100}%` }
+            ]} 
+          />
         </View>
-        
-        <View style={styles.progressContainer}>
-          <View style={styles.progressBar}>
-            <View 
-              style={[
-                styles.progressFill, 
-                { width: `${((currentPairIndex) / wordPairs.length) * 100}%` }
-              ]} 
-            />
-          </View>
-          <Text style={styles.progressText}>
-            {currentPairIndex + 1}/{wordPairs.length}
+        <Text style={styles.progressText}>
+          {currentPairIndex + 1}/{wordPairs.length}
+        </Text>
+      </View>
+      
+      {!gameOver ? (
+        <View style={styles.gameContent}>
+          <Text style={styles.instructionText}>
+            Are these words related to each other?
           </Text>
+          
+          <Animated.View 
+            style={[
+              styles.wordPairContainer,
+              {
+                transform: [
+                  { translateX: shakeAnimation },
+                  { scale: cardScale }
+                ]
+              }
+            ]}
+          >
+            <Text style={styles.word}>{currentPair.word1}</Text>
+            <Icon name="swap-vertical" size={30} color="#FFFFFF" style={styles.icon} />
+            <Text style={styles.word}>{currentPair.word2}</Text>
+          </Animated.View>
+          
+          <View style={styles.answersContainer}>
+            <TouchableOpacity
+              style={[styles.answerButton, styles.yesButton]}
+              onPress={() => handleAnswer(true)}
+            >
+              <Icon name="check" size={24} color="#FFFFFF" />
+              <Text style={styles.answerButtonText}>RELATED</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.answerButton, styles.noButton]}
+              onPress={() => handleAnswer(false)}
+            >
+              <Icon name="close" size={24} color="#FFFFFF" />
+              <Text style={styles.answerButtonText}>NOT RELATED</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-        
-        {!gameOver ? (
-          <View style={styles.gameContent}>
-            <Text style={styles.instructionText}>
-              Are these words related to each other?
-            </Text>
-            
-            <Animated.View 
-              style={[
-                styles.wordPairContainer,
-                {
-                  transform: [
-                    { translateX: shakeAnimation },
-                    { scale: cardScale }
-                  ]
-                }
-              ]}
-            >
-              <Text style={styles.word}>{currentPair.word1}</Text>
-              <Icon name="swap-vertical" size={30} color="#FFFFFF" style={styles.icon} />
-              <Text style={styles.word}>{currentPair.word2}</Text>
-            </Animated.View>
-            
-            <View style={styles.answersContainer}>
-              <TouchableOpacity
-                style={[styles.answerButton, styles.yesButton]}
-                onPress={() => handleAnswer(true)}
-              >
-                <Icon name="check" size={24} color="#FFFFFF" />
-                <Text style={styles.answerButtonText}>RELATED</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[styles.answerButton, styles.noButton]}
-                onPress={() => handleAnswer(false)}
-              >
-                <Icon name="close" size={24} color="#FFFFFF" />
-                <Text style={styles.answerButtonText}>NOT RELATED</Text>
-              </TouchableOpacity>
+      ) : (
+        <View style={styles.gameOverContainer}>
+          <Icon name="trophy" size={80} color="#FFD700" />
+          <Text style={styles.gameOverTitle}>Game Over!</Text>
+          <Text style={styles.gameOverScore}>Your Score: {score}</Text>
+          
+          <View style={styles.statsContainer}>
+            <View style={[styles.statItem, { backgroundColor: isDarkMode ? '#1E1E1E' : '#FFFFFF' }]}>
+              <Icon name="check-circle" size={24} color="#4CAF50" />
+              <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>
+                Correct Answers: {score / 10}
+              </Text>
+            </View>
+            <View style={[styles.statItem, { backgroundColor: isDarkMode ? '#1E1E1E' : '#FFFFFF' }]}>
+              <Icon name="clock-outline" size={24} color="#2196F3" />
+              <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>
+                Time Taken: {60 - timeRemaining}s
+              </Text>
             </View>
           </View>
-        ) : (
-          <View style={styles.gameOverContainer}>
-            <Icon name="trophy" size={80} color="#FFD700" />
-            <Text style={styles.gameOverTitle}>Game Over!</Text>
-            <Text style={styles.gameOverScore}>Your Score: {score}</Text>
-            
-            <View style={styles.statsContainer}>
-              <View style={styles.statItem}>
-                <Icon name="check-circle" size={24} color="#4CAF50" />
-                <Text style={styles.statLabel}>
-                  Correct Answers: {score / 10}
-                </Text>
-              </View>
-              <View style={styles.statItem}>
-                <Icon name="clock-outline" size={24} color="#2196F3" />
-                <Text style={styles.statLabel}>
-                  Time Taken: {60 - timeRemaining}s
-                </Text>
-              </View>
-            </View>
-            
-            <TouchableOpacity
-              style={styles.restartButton}
-              onPress={restartGame}
-            >
-              <Icon name="restart" size={20} color="#FFFFFF" />
-              <Text style={styles.restartButtonText}>Play Again</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={styles.homeButton}
-              onPress={() => navigation.navigate('GamesScreen')}
-            >
-              <Icon name="home" size={20} color="#6200EE" />
-              <Text style={styles.homeButtonText}>Go to Games</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-      </LinearGradient>
+          
+          <TouchableOpacity
+            style={styles.restartButton}
+            onPress={restartGame}
+          >
+            <Icon name="restart" size={20} color="#FFFFFF" />
+            <Text style={styles.restartButtonText}>Play Again</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={styles.homeButton}
+            onPress={() => navigation.navigate('GamesScreen')}
+          >
+            <Icon name="home" size={20} color="#6200EE" />
+            <Text style={styles.homeButtonText}>Go to Games</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </SafeAreaView>
   );
 };
@@ -279,29 +276,24 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  gradient: {
-    flex: 1,
-    paddingHorizontal: 20,
-  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: 10,
-    marginBottom: 20,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
   },
-  backButton: {
+  headerButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
-    color: '#FFFFFF',
   },
   timerContainer: {
     flexDirection: 'row',

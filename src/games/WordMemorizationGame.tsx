@@ -8,11 +8,13 @@ import {
   Dimensions,
   ScrollView,
   Animated,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { WordMemorizationGameProps } from '../types/navigation';
+import { useTheme } from '../context/ThemeContext';
 
 const { width, height } = Dimensions.get('window');
 
@@ -148,6 +150,7 @@ const paths = [
 ];
 
 const WordMemorizationGame = ({ navigation }: WordMemorizationGameProps) => {
+  const { theme, isDarkMode } = useTheme();
   const [gameStarted, setGameStarted] = useState(false);
   const [showLevelMap, setShowLevelMap] = useState(true);
   const [currentLevel, setCurrentLevel] = useState(1);
@@ -159,6 +162,24 @@ const WordMemorizationGame = ({ navigation }: WordMemorizationGameProps) => {
   const [gameLevels, setGameLevels] = useState(levels);
   const [gamePaths, setGamePaths] = useState(paths);
   const [shakeAnimation] = useState(new Animated.Value(0));
+
+  const handlePause = () => {
+    Alert.alert(
+      'Game Paused',
+      'What would you like to do?',
+      [
+        {
+          text: 'Resume',
+          style: 'cancel',
+        },
+        {
+          text: 'Quit Game',
+          onPress: () => navigation.goBack(),
+          style: 'destructive',
+        },
+      ]
+    );
+  };
 
   const handleStartGame = (levelId: number) => {
     // Check if level is unlocked
@@ -405,14 +426,20 @@ const WordMemorizationGame = ({ navigation }: WordMemorizationGameProps) => {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Icon name="chevron-left" size={24} color="#FFFFFF" />
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <View style={[styles.header, { borderBottomColor: isDarkMode ? '#333333' : '#EEEEEE' }]}>
+        <TouchableOpacity 
+          onPress={() => navigation.goBack()} 
+          style={[styles.headerButton, { backgroundColor: isDarkMode ? '#333333' : '#F0E6FF' }]}
+        >
+          <Icon name="arrow-left" size={24} color={theme.colors.primary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Word Memorization</Text>
-        <TouchableOpacity style={styles.menuButton}>
-          <Icon name="dots-vertical" size={24} color="#FFFFFF" />
+        <Text style={[styles.headerTitle, { color: theme.colors.text }]}>Word Memorization</Text>
+        <TouchableOpacity 
+          onPress={handlePause}
+          style={[styles.headerButton, { backgroundColor: isDarkMode ? '#333333' : '#F0E6FF' }]}
+        >
+          <Icon name="pause" size={24} color={theme.colors.primary} />
         </TouchableOpacity>
       </View>
       
@@ -426,24 +453,25 @@ const WordMemorizationGame = ({ navigation }: WordMemorizationGameProps) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1A1A1A',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 15,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
   },
-  backButton: {
-    padding: 8,
+  headerButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
-    color: '#FFFFFF',
-  },
-  menuButton: {
-    padding: 8,
   },
   levelMapContainer: {
     flex: 1,

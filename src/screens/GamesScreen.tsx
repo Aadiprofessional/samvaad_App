@@ -44,7 +44,7 @@ const GameCard = ({
   return (
     <TouchableOpacity style={styles.gameCardContainer} onPress={onPress} activeOpacity={0.9}>
       <LinearGradient
-        colors={isDarkMode ? [color1, color2] : [color1, color2]}
+        colors={[color1, color2]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.gameCardGradient}
@@ -55,14 +55,18 @@ const GameCard = ({
             <Text style={styles.diamondText}>{diamonds}</Text>
           </View>
         )}
-        <Image 
-          source={require('../assets/images/placeholder-avatar.png')} 
-          style={styles.gameCardImage} 
-        />
-        <Text style={styles.gameCardTitle} numberOfLines={2} ellipsizeMode="tail">{title}</Text>
-        <View style={styles.playButtonContainer}>
-          <View style={styles.playButton}>
-            <Text style={styles.playButtonText}>PLAY</Text>
+        <View style={styles.gameCardContent}>
+          <Image 
+            source={require('../assets/images/placeholder-avatar.png')} 
+            style={styles.gameCardImage} 
+          />
+          <Text style={styles.gameCardTitle} numberOfLines={2} ellipsizeMode="tail">
+            {title}
+          </Text>
+          <View style={styles.playButtonContainer}>
+            <View style={styles.playButton}>
+              <Text style={styles.playButtonText}>PLAY</Text>
+            </View>
           </View>
         </View>
       </LinearGradient>
@@ -84,25 +88,25 @@ const GamesScreen = ({ navigation }: GamesScreenProps) => {
   const recentGames = [
     {
       id: 1,
-      title: 'The game of six numbers',
+      title: 'Memory Sequence',
       icon: 'cards',
-      color1: '#7F7FD5',
-      color2: '#91EAE4',
-      navigateTo: 'FlipCardGame',
+      color1: '#F857A6',
+      color2: '#FF5858',
+      navigateTo: 'MemoryMatchGame',
     },
     {
       id: 2,
-      title: 'Around the world',
-      icon: 'earth',
-      color1: '#43E97B',
-      color2: '#38F9D7',
-      navigateTo: 'MemoryMatchGame',
+      title: 'Sign Language Quiz',
+      icon: 'hand-okay',
+      color1: '#FF6A88',
+      color2: '#FF99AC',
+      navigateTo: 'SignLanguageQuiz',
     },
   ];
 
   const newGames = [
     {
-      id: 3,
+      id: 1,
       title: 'Sign Language Quiz',
       icon: 'hand-okay',
       color1: '#FF6A88',
@@ -111,8 +115,8 @@ const GamesScreen = ({ navigation }: GamesScreenProps) => {
       navigateTo: 'SignLanguageQuiz',
     },
     {
-      id: 4,
-      title: 'Memory Cards',
+      id: 2,
+      title: 'Memory Sequence',
       icon: 'cards',
       color1: '#F857A6',
       color2: '#FF5858',
@@ -120,22 +124,31 @@ const GamesScreen = ({ navigation }: GamesScreenProps) => {
       navigateTo: 'MemoryMatchGame',
     },
     {
-      id: 5,
-      title: 'Word Memorization',
-      icon: 'alphabetical',
-      color1: '#7F7FD5',
-      color2: '#86A8E7',
-      diamonds: 27,
-      navigateTo: 'WordMemorizationGame',
-    },
-    {
-      id: 6,
+      id: 3,
       title: 'Card Flipping',
       icon: 'cards-playing-outline',
       color1: '#43E97B',
       color2: '#38F9D7',
-      diamonds: 27,
+      diamonds: 20,
       navigateTo: 'FlipCardGame',
+    },
+    {
+      id: 4,
+      title: 'Story Time',
+      icon: 'book-open-variant',
+      color1: '#FF8489',
+      color2: '#D76EAD',
+      diamonds: 30,
+      navigateTo: 'StoryTimeGame',
+    },
+    {
+      id: 5,
+      title: 'Word Association',
+      icon: 'connection',
+      color1: '#6D78E1',
+      color2: '#00B4D8',
+      diamonds: 18,
+      navigateTo: 'WordAssociationGame',
     },
   ];
 
@@ -169,7 +182,7 @@ const GamesScreen = ({ navigation }: GamesScreenProps) => {
             >
               <LinearGradient
                 colors={[game.color1, game.color2]}
-                style={styles.recentGameGradient}
+                style={styles.recentGameGradient }
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
               >
@@ -262,17 +275,24 @@ const styles = StyleSheet.create({
   },
   recentGamesContainer: {
     marginBottom: 25,
+    height: 150,
   },
   recentGameCard: {
     width: 250,
-    height: 150,
+    height: 160,
     borderRadius: 15,
-    marginRight: 15,
+
     overflow: 'hidden',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
   },
   recentGameGradient: {
     flex: 1,
     padding: 15,
+    borderRadius: 15,
   },
   recentGameContent: {
     flex: 1,
@@ -318,49 +338,79 @@ const styles = StyleSheet.create({
   },
   seeAllText: {
     fontWeight: '500',
+    fontSize: 14,
   },
   categoriesList: {
-    paddingVertical: 5,
+    paddingVertical: 10,
   },
   categoryItem: {
     alignItems: 'center',
-    marginRight: 20,
-    width: 60,
+    marginRight: 25,
+    width: 70,
   },
   categoryIconContainer: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 8,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
   },
   categoryIcon: {
-    width: 30,
-    height: 30,
+    width: 35,
+    height: 35,
     resizeMode: 'contain',
   },
   categoryText: {
-    fontSize: 12,
+    fontSize: 13,
     textAlign: 'center',
+    fontWeight: '500',
   },
   gameCardsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    marginBottom: 20,
+    marginBottom: 30,
   },
   gameCardContainer: {
     width: '48%',
-    height: 200,
-    borderRadius: 15,
     marginBottom: 15,
+    borderRadius: 16,
     overflow: 'hidden',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
   },
   gameCardGradient: {
-    flex: 1,
+    width: '100%',
+    height: 180,
+  },
+  gameCardContent: {
     padding: 15,
+    height: '100%',
     justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  gameCardImage: {
+    width: 60,
+    height: 60,
+    resizeMode: 'contain',
+    marginBottom: 5,
+  },
+  gameCardTitle: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginVertical: 5,
+    height: 50,
   },
   diamondBadge: {
     position: 'absolute',
@@ -372,6 +422,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
+    zIndex: 10,
   },
   diamondText: {
     color: '#FFFFFF',
@@ -379,21 +430,9 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginLeft: 4,
   },
-  gameCardImage: {
-    width: 60,
-    height: 60,
-    resizeMode: 'contain',
-    marginBottom: 10,
-  },
-  gameCardTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 10,
-    maxWidth: '100%',
-  },
   playButtonContainer: {
     alignItems: 'center',
+    marginTop: 5,
   },
   playButton: {
     backgroundColor: 'rgba(255, 255, 255, 0.3)',

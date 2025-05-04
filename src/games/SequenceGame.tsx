@@ -12,6 +12,7 @@ import {
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { SequenceGameProps } from '../types/navigation';
+import { useTheme } from '../context/ThemeContext';
 
 const { width } = Dimensions.get('window');
 const GRID_SIZE = 3;
@@ -26,6 +27,7 @@ type CardType = {
 };
 
 const SequenceGame = ({ navigation }: SequenceGameProps) => {
+  const { theme, isDarkMode } = useTheme();
   const [level, setLevel] = useState(1);
   const [score, setScore] = useState(0);
   const [sequence, setSequence] = useState<number[]>([]);
@@ -213,104 +215,128 @@ const SequenceGame = ({ navigation }: SequenceGameProps) => {
     );
   };
   
+  // Add pauseGame function
+  const pauseGame = () => {
+    if (gameStarted && !isShowingSequence) {
+      Alert.alert(
+        'Game Paused',
+        'What would you like to do?',
+        [
+          {
+            text: 'Resume',
+            style: 'cancel',
+          },
+          {
+            text: 'Quit Game',
+            onPress: () => navigation.goBack(),
+            style: 'destructive',
+          },
+        ]
+      );
+    }
+  };
+  
   // Generate grid of cards
   const renderCards = () => {
-    return (
-      <View style={styles.grid}>
-        {cards.map((card) => (
-          <Animated.View
-            key={card.id}
-            style={[
-              styles.cardContainer,
-              {
-                transform: [
-                  {
-                    scale: card.animValue,
-                  },
-                ],
-              },
-            ]}
-          >
-            <TouchableOpacity
-              style={[
-                styles.card,
-                card.highlighted && styles.highlightedCard,
-                playerSequence.includes(card.id) && styles.selectedCard,
-              ]}
-              onPress={() => handleCardPress(card.id)}
-              disabled={isShowingSequence}
-            />
-          </Animated.View>
-        ))}
-      </View>
-    );
+    return cards.map((card) => (
+      <Animated.View
+        key={card.id}
+        style={[
+          styles.tile,
+          card.highlighted && { backgroundColor: '#6A11CB' }, 
+          playerSequence.includes(card.id) && { backgroundColor: '#4CAF50' },
+          { transform: [{ scale: card.animValue }] },
+          { borderColor: isDarkMode ? '#444444' : '#DDDDDD' }
+        ]}
+      >
+        <TouchableOpacity
+          style={styles.tileInner}
+          onPress={() => handleCardPress(card.id)}
+          disabled={isShowingSequence}
+        />
+      </Animated.View>
+    ));
   };
   
   return (
-    <SafeAreaView style={styles.container}>
-      <LinearGradient
-        colors={['#00C9FF', '#92FE9D']}
-        style={styles.gradient}
-      >
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-          >
-            <Icon name="arrow-left" size={24} color="#FFFFFF" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Sequence Memory</Text>
-          <View style={styles.levelContainer}>
-            <Text style={styles.levelText}>Level {level}</Text>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <View style={[styles.header, { borderBottomColor: isDarkMode ? '#333333' : '#EEEEEE' }]}>
+        <TouchableOpacity 
+          onPress={() => navigation.goBack()} 
+          style={[styles.headerButton, { backgroundColor: isDarkMode ? '#333333' : '#F0E6FF' }]}
+        >
+          <Icon name="arrow-left" size={24} color={theme.colors.primary} />
+        </TouchableOpacity>
+        <Text style={[styles.headerTitle, { color: theme.colors.text }]}>Sequence Game</Text>
+        <TouchableOpacity 
+          onPress={pauseGame} 
+          style={[styles.headerButton, { backgroundColor: isDarkMode ? '#333333' : '#F0E6FF' }]}
+        >
+          <Icon name={gameStarted ? "pause" : "information"} size={24} color={theme.colors.primary} />
+        </TouchableOpacity>
+      </View>
+      
+      {gameStarted ? (
+        <View style={styles.gameContent}>
+          <View style={styles.gameInfo}>
+            <View style={[styles.infoItem, { backgroundColor: isDarkMode ? '#1E1E1E' : '#FFFFFF' }]}>
+              <Text style={[styles.infoLabel, { color: theme.colors.textSecondary }]}>Level</Text>
+              <Text style={[styles.infoValue, { color: theme.colors.text }]}>{level}</Text>
+            </View>
+            <View style={[styles.infoItem, { backgroundColor: isDarkMode ? '#1E1E1E' : '#FFFFFF' }]}>
+              <Text style={[styles.infoLabel, { color: theme.colors.textSecondary }]}>Score</Text>
+              <Text style={[styles.infoValue, { color: theme.colors.text }]}>{score}</Text>
+            </View>
+            <View style={[styles.infoItem, { backgroundColor: isDarkMode ? '#1E1E1E' : '#FFFFFF' }]}>
+              <Text style={[styles.infoLabel, { color: theme.colors.textSecondary }]}>Round</Text>
+              <Text style={[styles.infoValue, { color: theme.colors.text }]}>{level}</Text>
+            </View>
+          </View>
+          
+          <View style={styles.gameStatusContainer}>
+            {isShowingSequence ? (
+              <Text style={[styles.gameStatus, { color: theme.colors.textSecondary }]}>
+                Watch the sequence...
+              </Text>
+            ) : gameStarted ? (
+              <Text style={[styles.gameStatus, { color: theme.colors.textSecondary }]}>
+                Your turn - Repeat the sequence
+              </Text>
+            ) : null}
+          </View>
+          
+          <View style={styles.tilesContainer}>
+            {renderCards()}
           </View>
         </View>
-        
-        <View style={styles.scoreContainer}>
-          <Text style={styles.scoreLabel}>Score</Text>
-          <Text style={styles.scoreValue}>{score}</Text>
-        </View>
-        
-        <View style={styles.gameArea}>
-          {renderCards()}
-          
-          {isShowingSequence && (
-            <View style={styles.overlay}>
-              <Text style={styles.overlayText}>Watch the sequence...</Text>
-            </View>
-          )}
-          
-          {!gameStarted && !gameOver && (
-            <View style={styles.startOverlay}>
-              <Text style={styles.gameTitle}>Sequence Memory</Text>
-              <Text style={styles.gameInstructions}>
-                Watch the pattern, then repeat it by tapping the tiles in the same order
-              </Text>
-              <TouchableOpacity
-                style={styles.startButton}
-                onPress={startLevel}
-              >
-                <Text style={styles.startButtonText}>Start Game</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </View>
-        
-        <View style={styles.footer}>
-          <Text style={styles.instructionText}>
-            {isShowingSequence
-              ? 'Watch carefully...'
-              : gameStarted
-              ? 'Repeat the sequence!'
-              : 'Tap Start to begin'}
+      ) : (
+        <View style={styles.welcomeContainer}>
+          <Text style={[styles.welcomeTitle, { color: theme.colors.text }]}>Sequence Game</Text>
+          <Text style={[styles.welcomeDescription, { color: theme.colors.textSecondary }]}>
+            Watch the sequence of sign language symbols and repeat it in the correct order.
           </Text>
           
-          {gameStarted && !isShowingSequence && !gameOver && (
-            <Text style={styles.progressText}>
-              {playerSequence.length}/{sequence.length}
+          <View style={styles.levelInfo}>
+            <Text style={[styles.levelInfoText, { color: theme.colors.text }]}>
+              Current Level: {level}
             </Text>
-          )}
+            <Text style={[styles.levelInfoSubtext, { color: theme.colors.textSecondary }]}>
+              {/* getLevelDescription(level) */}
+            </Text>
+          </View>
+          
+          <TouchableOpacity style={styles.startButton} onPress={startLevel}>
+            <LinearGradient
+              colors={['#6a11cb', '#2575fc']}
+              style={styles.startButtonGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+            >
+              <Text style={styles.startButtonText}>Start Game</Text>
+            </LinearGradient>
+          </TouchableOpacity>
         </View>
-      </LinearGradient>
+      )}
     </SafeAreaView>
   );
 };
@@ -319,140 +345,136 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  gradient: {
-    flex: 1,
-    paddingHorizontal: 20,
-  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: 10,
-    marginBottom: 20,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
   },
-  backButton: {
+  headerButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-  },
-  levelContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-  },
-  levelText: {
-    color: '#FFFFFF',
+    fontSize: 18,
     fontWeight: 'bold',
   },
-  scoreContainer: {
-    alignItems: 'center',
-    marginBottom: 30,
-  },
-  scoreLabel: {
-    fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.8)',
-  },
-  scoreValue: {
-    fontSize: 36,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-  },
-  gameArea: {
+  gameContent: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
   },
-  grid: {
+  gameInfo: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    width: CARD_SIZE * GRID_SIZE + CARD_MARGIN * (GRID_SIZE - 1),
-    height: CARD_SIZE * GRID_SIZE + CARD_MARGIN * (GRID_SIZE - 1),
-  },
-  cardContainer: {
-    width: CARD_SIZE,
-    height: CARD_SIZE,
-    margin: CARD_MARGIN / 2,
-  },
-  card: {
-    flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    borderRadius: 8,
-  },
-  highlightedCard: {
-    backgroundColor: '#FFFFFF',
-  },
-  selectedCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.6)',
-  },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 15,
+    marginBottom: 20,
+    paddingHorizontal: 20,
+    width: '100%',
   },
-  overlayText: {
-    color: '#FFFFFF',
+  infoItem: {
+    padding: 10,
+    borderRadius: 8,
+    width: '30%',
+    alignItems: 'center',
+  },
+  infoLabel: {
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  infoValue: {
     fontSize: 18,
     fontWeight: 'bold',
   },
-  startOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  gameStatusContainer: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  gameStatus: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  tilesContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: CARD_SIZE * GRID_SIZE + CARD_MARGIN * (GRID_SIZE - 1),
+    maxWidth: width - 40,
+  },
+  tile: {
+    width: CARD_SIZE,
+    height: CARD_SIZE,
+    margin: CARD_MARGIN / 2,
+    borderWidth: 2,
+    borderRadius: 8,
+    backgroundColor: '#333333',
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  tileInner: {
+    width: '100%',
+    height: '100%',
+  },
+  tileText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
+  welcomeContainer: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
-    borderRadius: 15,
   },
-  gameTitle: {
+  welcomeTitle: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#FFFFFF',
     marginBottom: 20,
   },
-  gameInstructions: {
+  welcomeDescription: {
     fontSize: 16,
-    color: '#FFFFFF',
     textAlign: 'center',
     marginBottom: 30,
     lineHeight: 24,
   },
-  startButton: {
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 30,
-    paddingVertical: 15,
-    borderRadius: 25,
+  levelInfo: {
+    alignItems: 'center',
+    marginBottom: 30,
+    backgroundColor: 'rgba(106, 17, 203, 0.1)',
+    padding: 15,
+    borderRadius: 10,
+    width: '100%',
   },
-  startButtonText: {
-    color: '#00C9FF',
+  levelInfoText: {
     fontSize: 18,
     fontWeight: 'bold',
   },
-  footer: {
-    paddingVertical: 20,
+  levelInfoSubtext: {
+    fontSize: 16,
+  },
+  startButton: {
+    width: width - 60,
+    height: 50,
+    borderRadius: 25,
+    overflow: 'hidden',
+  },
+  startButtonGradient: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  instructionText: {
-    fontSize: 16,
+  startButtonText: {
     color: '#FFFFFF',
-    marginBottom: 10,
-    fontWeight: '500',
-  },
-  progressText: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#FFFFFF',
   },
 });
 

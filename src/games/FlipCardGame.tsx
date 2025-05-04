@@ -358,7 +358,7 @@ const FlipCardGame = ({ navigation, route }: NavigationProps) => {
         disabled={card.matched}
       >
         <View style={styles.cardWrapper}>
-          {/* Front of card (question mark side) */}
+          {/* Front of card (icon side) */}
           <Animated.View
             style={[
               styles.cardFace,
@@ -369,7 +369,7 @@ const FlipCardGame = ({ navigation, route }: NavigationProps) => {
             ]}
           >
             <View style={styles.questionMarkContainer}>
-              <Text style={[styles.questionMark, { color: theme.colors.primary }]}>?</Text>
+              <Icon name="card-account-details-outline" size={36} color="#FFFFFF" />
             </View>
           </Animated.View>
 
@@ -614,6 +614,7 @@ const styles = StyleSheet.create({
   welcomeImage: {
     width: 150,
     height: 150,
+    resizeMode: 'contain',
     marginBottom: 20,
   },
   welcomeTitle: {

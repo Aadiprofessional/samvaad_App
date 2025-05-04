@@ -12,6 +12,7 @@ import {
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { StoryTimeGameProps } from '../types/navigation';
+import { useTheme } from '../context/ThemeContext';
 
 type StorySegmentType = {
   id: number;
@@ -93,6 +94,7 @@ const storyData: StoryType = {
 };
 
 const StoryTimeGame = ({ navigation }: StoryTimeGameProps) => {
+  const { theme, isDarkMode } = useTheme();
   const [currentSegmentIndex, setCurrentSegmentIndex] = useState(0);
   const [score, setScore] = useState(0);
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
@@ -131,135 +133,155 @@ const StoryTimeGame = ({ navigation }: StoryTimeGameProps) => {
     setGameComplete(false);
   };
   
+  const handlePause = () => {
+    Alert.alert(
+      'Game Paused',
+      'What would you like to do?',
+      [
+        {
+          text: 'Resume',
+          style: 'cancel',
+        },
+        {
+          text: 'Quit Game',
+          onPress: () => navigation.goBack(),
+          style: 'destructive',
+        },
+      ]
+    );
+  };
+  
   const getOptionStyle = (index: number) => {
+    const baseStyle = [
+      styles.optionButton, 
+      { backgroundColor: isDarkMode ? '#1E1E1E' : '#FFFFFF' }
+    ];
+    
     if (selectedOption === null) {
-      return styles.optionButton;
+      return baseStyle;
     }
     
     if (index === currentSegment.correctOption) {
-      return [styles.optionButton, styles.correctOption];
+      return [...baseStyle, styles.correctOption];
     }
     
     if (index === selectedOption && selectedOption !== currentSegment.correctOption) {
-      return [styles.optionButton, styles.incorrectOption];
+      return [...baseStyle, styles.incorrectOption];
     }
     
-    return styles.optionButton;
+    return baseStyle;
   };
   
   return (
-    <SafeAreaView style={styles.container}>
-      <LinearGradient
-        colors={[storyData.color1, storyData.color2]}
-        style={styles.gradient}
-      >
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-          >
-            <Icon name="arrow-left" size={24} color="#FFFFFF" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Story Time</Text>
-          <View style={styles.scoreContainer}>
-            <Icon name="star" size={16} color="#FFD700" />
-            <Text style={styles.scoreText}>{score}</Text>
-          </View>
-        </View>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <View style={[styles.header, { borderBottomColor: isDarkMode ? '#333333' : '#EEEEEE' }]}>
+        <TouchableOpacity 
+          onPress={() => navigation.goBack()} 
+          style={[styles.headerButton, { backgroundColor: isDarkMode ? '#333333' : '#F0E6FF' }]}
+        >
+          <Icon name="arrow-left" size={24} color={theme.colors.primary} />
+        </TouchableOpacity>
+        <Text style={[styles.headerTitle, { color: theme.colors.text }]}>Story Time</Text>
+        <TouchableOpacity 
+          onPress={handlePause} 
+          style={[styles.headerButton, { backgroundColor: isDarkMode ? '#333333' : '#F0E6FF' }]}
+        >
+          <Icon name="pause" size={24} color={theme.colors.primary} />
+        </TouchableOpacity>
+      </View>
+      
+      <View style={[styles.progressBarContainer, { backgroundColor: isDarkMode ? '#333333' : '#EEEEEE' }]}>
+        <View 
+          style={[
+            styles.progressFill, 
+            { width: `${((currentSegmentIndex) / storyData.segments.length) * 100}%` }
+          ]} 
+        />
+      </View>
         
-        <View style={styles.progressBar}>
-          <View 
-            style={[
-              styles.progressFill, 
-              { width: `${((currentSegmentIndex) / storyData.segments.length) * 100}%` }
-            ]} 
-          />
-        </View>
-        
-        {!gameComplete ? (
-          <ScrollView 
-            style={styles.scrollView}
-            contentContainerStyle={styles.scrollViewContent}
-          >
-            <View style={styles.storyContainer}>
-              <Text style={styles.storyText}>{currentSegment.text}</Text>
-              
-              <Text style={styles.questionText}>What happens next?</Text>
-              
-              {currentSegment.options.map((option, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={getOptionStyle(index)}
-                  onPress={() => handleOptionSelect(index)}
-                  disabled={selectedOption !== null}
-                >
-                  <Text style={styles.optionText}>{option}</Text>
-                </TouchableOpacity>
-              ))}
-              
-              {isCorrect !== null && (
-                <View style={styles.feedbackContainer}>
-                  <Icon 
-                    name={isCorrect ? "check-circle" : "close-circle"} 
-                    size={30} 
-                    color={isCorrect ? "#4CAF50" : "#F44336"} 
-                  />
-                  <Text style={[
-                    styles.feedbackText,
-                    { color: isCorrect ? "#4CAF50" : "#F44336" }
-                  ]}>
-                    {isCorrect ? "Correct! Good job!" : "Oops! That's not right."}
-                  </Text>
-                </View>
-              )}
-            </View>
-          </ScrollView>
-        ) : (
-          <View style={styles.gameCompleteContainer}>
-            <Icon name="trophy" size={80} color="#FFD700" />
-            <Text style={styles.gameCompleteTitle}>Story Complete!</Text>
-            <Text style={styles.gameCompleteScore}>Your Score: {score}</Text>
+      {!gameComplete ? (
+        <ScrollView 
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollViewContent}
+        >
+          <View style={[styles.storyContainer, { backgroundColor: isDarkMode ? '#1E1E1E' : '#FFFFFF' }]}>
+            <Text style={[styles.storyText, { color: theme.colors.text }]}>{currentSegment.text}</Text>
             
-            <View style={styles.storyCompleteCard}>
-              <Text style={styles.storyCompleteSummary}>
-                You helped Max find his way back to his family and learned about responsible pet ownership!
-              </Text>
-              
-              <View style={styles.moralsContainer}>
-                <Text style={styles.moralsTitle}>Story Morals:</Text>
-                <View style={styles.moralItem}>
-                  <Icon name="check-circle" size={20} color="#4CAF50" />
-                  <Text style={styles.moralText}>Always keep pets safe and supervised</Text>
-                </View>
-                <View style={styles.moralItem}>
-                  <Icon name="check-circle" size={20} color="#4CAF50" />
-                  <Text style={styles.moralText}>Be patient and thorough when searching for lost pets</Text>
-                </View>
-                <View style={styles.moralItem}>
-                  <Icon name="check-circle" size={20} color="#4CAF50" />
-                  <Text style={styles.moralText}>Using proper pet equipment like leashes is important</Text>
-                </View>
+            <Text style={[styles.questionText, { color: theme.colors.text }]}>What happens next?</Text>
+            
+            {currentSegment.options.map((option, index) => (
+              <TouchableOpacity
+                key={index}
+                style={getOptionStyle(index)}
+                onPress={() => handleOptionSelect(index)}
+                disabled={selectedOption !== null}
+              >
+                <Text style={[styles.optionText, { color: theme.colors.text }]}>{option}</Text>
+              </TouchableOpacity>
+            ))}
+            
+            {isCorrect !== null && (
+              <View style={styles.feedbackContainer}>
+                <Icon 
+                  name={isCorrect ? "check-circle" : "close-circle"} 
+                  size={30} 
+                  color={isCorrect ? "#4CAF50" : "#F44336"} 
+                />
+                <Text style={[
+                  styles.feedbackText,
+                  { color: isCorrect ? "#4CAF50" : "#F44336" }
+                ]}>
+                  {isCorrect ? "Correct! Good job!" : "Oops! That's not right."}
+                </Text>
+              </View>
+            )}
+          </View>
+        </ScrollView>
+      ) : (
+        <View style={styles.gameCompleteContainer}>
+          <Icon name="trophy" size={80} color="#FFD700" />
+          <Text style={[styles.gameCompleteTitle, { color: theme.colors.text }]}>Story Complete!</Text>
+          <Text style={[styles.gameCompleteScore, { color: theme.colors.primary }]}>Your Score: {score}</Text>
+          
+          <View style={[styles.storyCompleteCard, { backgroundColor: isDarkMode ? '#1E1E1E' : '#FFFFFF' }]}>
+            <Text style={[styles.storyCompleteSummary, { color: theme.colors.text }]}>
+              You helped Max find his way back to his family and learned about responsible pet ownership!
+            </Text>
+            
+            <View style={styles.moralsContainer}>
+              <Text style={[styles.moralsTitle, { color: theme.colors.text }]}>Story Morals:</Text>
+              <View style={styles.moralItem}>
+                <Icon name="check-circle" size={20} color="#4CAF50" />
+                <Text style={[styles.moralText, { color: theme.colors.textSecondary }]}>Always keep pets safe and supervised</Text>
+              </View>
+              <View style={styles.moralItem}>
+                <Icon name="check-circle" size={20} color="#4CAF50" />
+                <Text style={[styles.moralText, { color: theme.colors.textSecondary }]}>Be patient and thorough when searching for lost pets</Text>
+              </View>
+              <View style={styles.moralItem}>
+                <Icon name="check-circle" size={20} color="#4CAF50" />
+                <Text style={[styles.moralText, { color: theme.colors.textSecondary }]}>Using proper pet equipment like leashes is important</Text>
               </View>
             </View>
-            
-            <TouchableOpacity
-              style={styles.restartButton}
-              onPress={restartGame}
-            >
-              <Icon name="restart" size={20} color="#FFFFFF" />
-              <Text style={styles.restartButtonText}>Read Again</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={styles.homeButton}
-              onPress={() => navigation.navigate('GamesScreen')}
-            >
-              <Icon name="bookshelf" size={20} color="#6200EE" />
-              <Text style={styles.homeButtonText}>More Stories</Text>
-            </TouchableOpacity>
           </View>
-        )}
-      </LinearGradient>
+          
+          <TouchableOpacity
+            style={styles.restartButton}
+            onPress={restartGame}
+          >
+            <Icon name="restart" size={20} color="#FFFFFF" />
+            <Text style={styles.restartButtonText}>Read Again</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={styles.homeButton}
+            onPress={() => navigation.navigate('GamesScreen')}
+          >
+            <Icon name="bookshelf" size={20} color="#6200EE" />
+            <Text style={styles.homeButtonText}>More Stories</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </SafeAreaView>
   );
 };
@@ -268,52 +290,32 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  gradient: {
-    flex: 1,
-    paddingHorizontal: 20,
-  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: 10,
-    marginBottom: 10,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
   },
-  backButton: {
+  headerButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-  },
-  scoreContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-  },
-  scoreText: {
-    marginLeft: 5,
-    color: '#FFFFFF',
+    fontSize: 18,
     fontWeight: 'bold',
   },
-  progressBar: {
+  progressBarContainer: {
     height: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
     borderRadius: 3,
-    marginBottom: 20,
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#6A11CB',
     borderRadius: 3,
   },
   scrollView: {
