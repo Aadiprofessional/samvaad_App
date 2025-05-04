@@ -94,7 +94,7 @@ const Card: React.FC<CardProps> = ({
   ];
   
   const content = (
-    <View style={[styles.content, contentStyle]}>
+    <View style={[styles.content, contentStyle, { zIndex: 10 }]}>
       {children}
     </View>
   );
@@ -116,7 +116,7 @@ const Card: React.FC<CardProps> = ({
       <TouchableOpacity
         activeOpacity={0.8}
         onPress={onPress}
-        style={elevated ? getShadowStyle('medium') : {}}
+        style={[elevated ? getShadowStyle('medium') : {}, styles.touchableCard]}
         {...props}
       >
         {cardContent}
@@ -126,7 +126,7 @@ const Card: React.FC<CardProps> = ({
   
   return onPress ? (
     <TouchableOpacity
-      style={cardStyles}
+      style={[cardStyles, styles.touchableCard]}
       activeOpacity={0.8}
       onPress={onPress}
       {...props}
@@ -147,6 +147,13 @@ const styles = StyleSheet.create({
   content: {
     padding: scale(16),
   },
+  touchableCard: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.5,
+    shadowRadius: 6,
+    elevation: 8,
+  }
 });
 
 export default Card; 

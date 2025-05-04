@@ -1,7 +1,10 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
+import { CommonActions } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { Platform, View, StyleSheet } from 'react-native';
+import { scale } from '../utils/responsive';
 
 // Import screens
 import HomeScreen from '../screens/HomeScreen';
@@ -27,32 +30,23 @@ import TestSeriesScreen from '../screens/study/TestSeriesScreen';
 import LectureDetailScreen from '../screens/study/LectureDetailScreen';
 import TestDetailScreen from '../screens/study/TestDetailScreen';
 
-// Import types
-import { 
-  HomeStackParamList, 
-  GamesStackParamList, 
-  StudyStackParamList,
-  TranslatorStackParamList,
-  LeaderboardStackParamList,
-  RootStackParamList
-} from '../types/navigation';
-
 const Stack = createStackNavigator();
-const Tab = createBottomTabNavigator<RootStackParamList>();
+const Tab = createBottomTabNavigator();
 
+// Create individual stack navigators for each main section
 const HomeStack = () => (
   <Stack.Navigator screenOptions={{ headerShown: false }}>
     <Stack.Screen name="HomeScreen" component={HomeScreen} />
-    <Stack.Screen name="Profile" component={ProfileScreen} />
     <Stack.Screen name="Settings" component={SettingsScreen} />
+    <Stack.Screen name="Profile" component={ProfileScreen} />
   </Stack.Navigator>
 );
 
 const GamesStack = () => (
-  <Stack.Navigator screenOptions={{ headerShown: false }}>
+  <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="GamesScreen">
     <Stack.Screen name="GamesScreen" component={GamesScreen} />
-    <Stack.Screen name="FlipCardGame" component={FlipCardGameScreen} />
     <Stack.Screen name="MemoryMatchGame" component={MemoryMatchGameScreen} />
+    <Stack.Screen name="FlipCardGame" component={FlipCardGameScreen} />
     <Stack.Screen name="SignLanguageQuiz" component={SignLanguageQuizScreen} />
     <Stack.Screen name="WordMemorizationGame" component={WordMemorizationGameScreen} />
     <Stack.Screen name="WordAssociationGame" component={WordAssociationGameScreen} />
@@ -61,15 +55,9 @@ const GamesStack = () => (
   </Stack.Navigator>
 );
 
-const LeaderboardStack = () => (
-  <Stack.Navigator screenOptions={{ headerShown: false }}>
-    <Stack.Screen name="LeaderboardMain" component={LeaderboardScreen} />
-  </Stack.Navigator>
-);
-
 const StudyStack = () => (
   <Stack.Navigator screenOptions={{ headerShown: false }}>
-    <Stack.Screen name="StudyMain" component={StudyScreen} />
+    <Stack.Screen name="StudyScreen" component={StudyScreen} />
     <Stack.Screen name="Lectures" component={LecturesScreen} />
     <Stack.Screen name="TestSeries" component={TestSeriesScreen} />
     <Stack.Screen name="LectureDetail" component={LectureDetailScreen} />
@@ -79,7 +67,13 @@ const StudyStack = () => (
 
 const TranslatorStack = () => (
   <Stack.Navigator screenOptions={{ headerShown: false }}>
-    <Stack.Screen name="TranslatorMain" component={TranslatorScreen} />
+    <Stack.Screen name="TranslatorScreen" component={TranslatorScreen} />
+  </Stack.Navigator>
+);
+
+const LeaderboardStack = () => (
+  <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Screen name="LeaderboardScreen" component={LeaderboardScreen} />
   </Stack.Navigator>
 );
 
@@ -88,7 +82,7 @@ const AppNavigator = () => {
     <Tab.Navigator
       screenOptions={({ route }) => ({
         tabBarIcon: ({ focused, color, size }) => {
-          let iconName: string = 'home';
+          let iconName = 'home';
 
           if (route.name === 'Home') {
             iconName = focused ? 'home' : 'home-outline';
@@ -99,7 +93,7 @@ const AppNavigator = () => {
           } else if (route.name === 'Study') {
             iconName = focused ? 'book-open-page-variant' : 'book-open-outline';
           } else if (route.name === 'Translator') {
-            iconName = focused ? 'sign-language' : 'sign-language';
+            iconName = focused ? 'hand-front-right' : 'hand-front-right-outline';
           }
 
           return <Icon name={iconName} size={size} color={color} />;
@@ -108,23 +102,54 @@ const AppNavigator = () => {
         tabBarInactiveTintColor: 'gray',
         headerShown: false,
         tabBarStyle: {
-          paddingBottom: 5,
-          paddingTop: 5,
-          height: 60,
+          backgroundColor: '#000000',
+          paddingBottom: Platform.OS === 'ios' ? scale(20) : scale(5),
+          paddingTop: scale(5),
+          height: Platform.OS === 'ios' ? scale(80) : scale(60),
+          borderTopWidth: 0,
+          elevation: 0,
+          shadowOpacity: 0,
+          borderTopColor: 'transparent'
         },
         tabBarLabelStyle: {
           fontSize: 12,
           fontWeight: '500',
+          marginBottom: Platform.OS === 'ios' ? scale(5) : 0,
         },
+        tabBarBackground: () => (
+          <View style={styles.tabBarBackground} />
+        ),
       })}
+      initialRouteName="Home"
     >
       <Tab.Screen name="Home" component={HomeStack} />
-      <Tab.Screen name="Games" component={GamesStack} />
+      <Tab.Screen 
+        name="Games" 
+        component={GamesStack} 
+        options={{ unmountOnBlur: false }}
+        listeners={({ navigation }) => ({
+          tabPress: e => {
+            // Reset to the main games screen when the tab is pressed
+            navigation.navigate('Games', { screen: 'GamesScreen' });
+          },
+        })}
+      />
       <Tab.Screen name="Study" component={StudyStack} />
       <Tab.Screen name="Translator" component={TranslatorStack} />
       <Tab.Screen name="Leaderboard" component={LeaderboardStack} />
     </Tab.Navigator>
   );
 };
+
+const styles = StyleSheet.create({
+  tabBarBackground: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#000000',
+  }
+});
 
 export default AppNavigator; 

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -11,21 +11,38 @@ import {
   StatusBar,
   Animated,
   Platform,
-
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
+import { supabase } from '../services/supabaseClient';
 import { scale, fontScale, moderateScale, isTablet } from '../utils/responsive';
 import Card from '../components/Card';
 import Button from '../components/Button';
 import ThemeToggle from '../components/ThemeToggle';
+import SliderComponent from '../components/SliderComponent';
+import GameCard from '../components/GameCard';
 import { NavigationProp, ParamListBase } from '@react-navigation/native';
 
 const { width } = Dimensions.get('window');
-const CARD_WIDTH = isTablet() ? width / 3 - scale(24) : width / 2 - scale(24);
+const CARD_WIDTH = width / 2 - scale(32); // 2 cards per row with more spacing
 const FEATURE_CARD_WIDTH = width - scale(32);
+
+// Add SliderItem type definition to match the one in SliderComponent
+interface SliderItem {
+  id: number;
+  title: string;
+  description?: string;
+  tag?: string;
+  buttonText?: string;
+  icon?: string;
+  gradient: string[];
+  progress?: number;
+  lessons?: number;
+  type?: 'learn' | 'play' | 'translate';
+}
 
 interface Category {
   id: string;
@@ -36,181 +53,216 @@ interface Category {
 interface Game {
   id: number;
   title: string;
+  description?: string;
   image: any;
   gradient: string[];
   level?: string;
   navigateTo: string;
 }
 
-interface LearningPath {
-  id: number;
-  title: string;
-  progress: number;
-  lessons: number;
-  image: any;
-  gradient: string[];
-}
-
 interface HomeScreenProps {
   navigation: NavigationProp<ParamListBase>;
 }
 
-// Default gradients to use as fallbacks
+interface UserData {
+  name?: string;
+  [key: string]: any;
+}
+
+// Update DEFAULT_GRADIENTS with even lighter, more vibrant gradients
 const DEFAULT_GRADIENTS = {
-  play: ['#6a11cb', '#2575fc'],
-  learn: ['#00cdac', '#8ddad5'],
-  translate: ['#ff9966', '#ff5e62']
+  play: ['#7F53AC', '#647DEE'], // Vibrant purple gradient
+  learn: ['#56CCF2', '#2F80ED'], // Bright blue gradient
+  translate: ['#FF9966', '#FF5E62'] // Bright orange-red gradient
 };
 
 const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const { theme, isDarkMode } = useTheme();
-  const scrollY = new Animated.Value(0);
-  const [featuredIndex, setFeaturedIndex] = useState(0);
+  const { profile, user } = useAuth();
+  const [userData, setUserData] = useState<UserData | null>(null);
   
-  // Safely get gradients with fallbacks
-  const getGradient = (type: 'play' | 'learn' | 'translate') => {
-    return theme?.colors?.gradients?.[type] || DEFAULT_GRADIENTS[type];
-  };
-  
-  // Header animation values
+  // Animated header values
+  const scrollY = useRef(new Animated.Value(0)).current;
   const headerHeight = scrollY.interpolate({
-    inputRange: [0, 100],
-    outputRange: [scale(130), scale(70)],
+    inputRange: [0, 80],
+    outputRange: [scale(80), scale(50)],
     extrapolate: 'clamp',
   });
   
   const headerOpacity = scrollY.interpolate({
-    inputRange: [0, 60, 90],
-    outputRange: [1, 0.5, 0],
+    inputRange: [0, 40, 80],
+    outputRange: [1, 0.3, 0],
     extrapolate: 'clamp',
   });
   
   const headerTitleOpacity = scrollY.interpolate({
-    inputRange: [0, 60, 90],
+    inputRange: [0, 40, 80],
     outputRange: [0, 0.5, 1],
     extrapolate: 'clamp',
   });
-  
-  // Auto-scroll featured items
+
   useEffect(() => {
-    const interval = setInterval(() => {
-      setFeaturedIndex((prevIndex) => (prevIndex + 1) % featuredItems.length);
-    }, 5000);
+    const fetchUserData = async () => {
+      try {
+        if (user) {
+          // Use user metadata instead of querying the database if profiles table doesn't exist
+          setUserData({
+            name: user.user_metadata?.name || 'User'
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+        // Fallback to user metadata if database query fails
+        if (user?.user_metadata) {
+          setUserData({
+            name: user.user_metadata.name || 'User'
+          });
+        }
+      }
+    };
     
-    return () => clearInterval(interval);
-  }, []);
+    fetchUserData();
+  }, [user]);
   
-  const categories: Category[] = [
+  const getGradient = (type: 'play' | 'learn' | 'translate') => {
+    return DEFAULT_GRADIENTS[type];
+  };
+  
+  // Update featured items with lighter gradients
+  const featuredItems: SliderItem[] = [
+    {
+      id: 1,
+      title: 'Learn Sign Language Basics',
+      description: 'Get started with basic sign language training through interactive lessons.',
+      tag: 'Beginner',
+      buttonText: 'Start Learning',
+      icon: 'handshake',
+      gradient: ['#36D1DC', '#5B86E5'], // Light blue gradient
+      type: 'learn'
+    },
+    {
+      id: 2,
+      title: 'Play Sign Language Games',
+      description: 'Enhance your skills with fun memory games and challenges.',
+      tag: 'Fun',
+      buttonText: 'Play Now',
+      icon: 'gamepad-variant',
+      gradient: ['#4776E6', '#8E54E9'], // Light purple gradient
+      type: 'play'
+    },
+    {
+      id: 3,
+      title: 'Translate Signs in Real-time',
+      description: 'Use your camera to translate sign language into text instantly.',
+      tag: 'Tool',
+      buttonText: 'Try it',
+      icon: 'translate',
+      gradient: ['#FF9966', '#FF5E62'], // Light orange-red gradient
+      type: 'translate'
+    }
+  ];
+  
+  // Categories
+  const categories = [
     { id: 'alphabet', name: 'Alphabet', icon: 'alphabetical' },
     { id: 'numbers', name: 'Numbers', icon: 'numeric' },
     { id: 'phrases', name: 'Phrases', icon: 'message-text' },
-    { id: 'conversation', name: 'Conversation', icon: 'account-group' },
+    { id: 'conversations', name: 'Conversations', icon: 'account-group' },
+    { id: 'practice', name: 'Practice', icon: 'handshake' },
   ];
-
+  
+  // Update learning paths with lighter gradients
+  const learningPaths = [
+    {
+      id: 1,
+      title: 'Basics of Sign Language',
+      description: 'Learn the fundamental concepts of sign language',
+      progress: 65,
+      lessons: 10,
+      gradient: ['#36D1DC', '#5B86E5'], // Light blue gradient
+    },
+    {
+      id: 2,
+      title: 'Everyday Conversations',
+      description: 'Practice common phrases for daily communication',
+      progress: 30,
+      lessons: 8,
+      gradient: ['#FF9966', '#FF5E62'], // Light orange-red gradient
+    },
+    {
+      id: 3,
+      title: 'Advanced Techniques',
+      description: 'Master complex sign language expressions',
+      progress: 10,
+      lessons: 12,
+      gradient: ['#4776E6', '#8E54E9'], // Light purple gradient
+    }
+  ];
+  
+  // Update popular games with lighter gradients
   const popularGames: Game[] = [
     {
       id: 1,
       title: 'Memory Match',
+      description: 'Match signs with their meanings in this fun memory game',
       image: require('../assets/images/placeholder-avatar.png'),
-      gradient: getGradient('play'),
+      gradient: ['#7F53AC', '#647DEE'], // Vibrant purple gradient
       level: 'Beginner',
-      navigateTo: 'MemoryMatchGame',
+      navigateTo: 'MemoryMatchGame'
     },
     {
       id: 2,
       title: 'Sign Quiz',
+      description: 'Test your knowledge with interactive quizzes',
       image: require('../assets/images/placeholder-avatar.png'),
-      gradient: getGradient('play'),
+      gradient: ['#FF9966', '#FF5E62'], // Bright orange-red gradient
       level: 'Intermediate',
-      navigateTo: 'SignLanguageQuiz',
+      navigateTo: 'SignLanguageQuiz'
     },
     {
       id: 3,
       title: 'Word Association',
+      description: 'Associate signs with words in this challenging game',
       image: require('../assets/images/placeholder-avatar.png'),
-      gradient: getGradient('play'),
+      gradient: ['#C471ED', '#F64F59'], // Vibrant pink-purple gradient
       level: 'Advanced',
-      navigateTo: 'WordAssociationGame',
+      navigateTo: 'WordAssociationGame'
     },
     {
       id: 4,
       title: 'Story Time',
+      description: 'Follow along with interactive sign language stories',
       image: require('../assets/images/placeholder-avatar.png'),
-      gradient: getGradient('play'),
-      level: 'Beginner',
-      navigateTo: 'StoryTimeGame',
-    },
-  ];
-
-  const learningPaths: LearningPath[] = [
-    {
-      id: 1,
-      title: 'Sign Language Basics',
-      progress: 40,
-      lessons: 12,
-      image: require('../assets/images/placeholder-avatar.png'),
-      gradient: getGradient('learn'),
-    },
-    {
-      id: 2,
-      title: 'Daily Conversations',
-      progress: 25,
-      lessons: 18,
-      image: require('../assets/images/placeholder-avatar.png'),
-      gradient: getGradient('learn'),
-    },
-    {
-      id: 3,
-      title: 'Advanced Signing',
-      progress: 10,
-      lessons: 24,
-      image: require('../assets/images/placeholder-avatar.png'),
-      gradient: getGradient('learn'),
-    },
+      gradient: ['#56CCF2', '#2F80ED'], // Bright blue gradient
+      level: 'All Levels',
+      navigateTo: 'StoryTimeGame'
+    }
   ];
   
-  const featuredItems = [
-    {
-      id: 1,
-      title: 'Learn Sign Language Now',
-      description: 'Master the basics with our interactive lessons',
-      buttonText: 'Start Learning',
-      icon: 'school',
-      onPress: () => navigation.navigate('Study'),
-      gradient: getGradient('learn'),
-    },
-    {
-      id: 2,
-      title: 'Play & Learn',
-      description: 'Fun games to improve your signing skills',
-      buttonText: 'Play Now',
-      icon: 'gamepad-variant',
-      onPress: () => navigation.navigate('Games'),
-      gradient: getGradient('play'),
-    },
-    {
-      id: 3,
-      title: 'Translate in Real-time',
-      description: 'Use our camera to translate sign language instantly',
-      buttonText: 'Try Now',
-      icon: 'translate',
-      onPress: () => navigation.navigate('Translator'),
-      gradient: getGradient('translate'),
-    },
-  ];
-
+  const handleFeaturePress = (item: SliderItem) => {
+    if (item.type === 'learn') {
+      navigation.navigate('Study');
+    } else if (item.type === 'play') {
+      navigation.navigate('Games');
+    } else if (item.type === 'translate') {
+      navigation.navigate('Translator');
+    }
+  };
+  
   const renderCategory = ({ item }: { item: Category }) => (
     <TouchableOpacity 
+      onPress={() => navigation.navigate('Study')}
       style={[
-        styles.categoryItem, 
+        styles.categoryItem,
         { backgroundColor: theme.colors.card }
       ]}
-      onPress={() => {}}
     >
-      <View style={[
-        styles.categoryIconContainer, 
-        { backgroundColor: `${theme.colors.primary}20` }
-      ]}>
+      <View 
+        style={[
+          styles.categoryIconContainer,
+          { backgroundColor: theme.colors.primary + '20' }
+        ]}
+      >
         <Icon name={item.icon} size={24} color={theme.colors.primary} />
       </View>
       <Text style={[styles.categoryName, { color: theme.colors.text }]}>
@@ -219,99 +271,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     </TouchableOpacity>
   );
 
-  const renderGameCard = ({ item }: { item: Game }) => (
-    <TouchableOpacity
-      style={styles.gameCard}
-      onPress={() => navigation.navigate(item.navigateTo)}
-    >
-      <Card gradient={item.gradient}>
-        <View style={styles.gameCardContent}>
-          <Image source={item.image} style={styles.gameImage} />
-          <View style={styles.gameInfo}>
-            <Text style={styles.gameTitle}>{item.title}</Text>
-            {item.level && (
-              <View style={styles.levelBadge}>
-                <Text style={styles.levelText}>{item.level}</Text>
-              </View>
-            )}
-          </View>
-          <View style={styles.playButton}>
-            <Icon name="play" size={20} color="#FFFFFF" />
-          </View>
-        </View>
-      </Card>
-    </TouchableOpacity>
-  );
-
-  const renderLearningPath = ({ item }: { item: LearningPath }) => (
-    <Card 
-      gradient={item.gradient}
-      style={styles.learningPathCard}
-      onPress={() => {}}
-    >
-      <View style={styles.learningPathContent}>
-        <Text style={styles.learningPathTitle}>{item.title}</Text>
-        <View style={styles.lessonInfo}>
-          <Text style={styles.lessonCount}>{item.lessons} Lessons</Text>
-          <View style={styles.progressContainer}>
-            <Text style={styles.progressText}>{item.progress}% Complete</Text>
-            <View style={styles.progressBar}>
-              <View 
-                style={[
-                  styles.progressFill, 
-                  { width: `${item.progress}%` }
-                ]} 
-              />
-            </View>
-          </View>
-        </View>
-        <Button 
-          title="Continue" 
-          size="small" 
-          rightIcon="arrow-right"
-          variant="ghost"
-          onPress={() => {}}
-          style={styles.continueButton}
-          textStyle={{ color: '#FFFFFF' }}
-        />
-      </View>
-    </Card>
-  );
-
-  const renderFeaturedItem = ({ item, index }: { item: any; index: number }) => (
-    <Card
-      gradient={item.gradient}
-      style={[
-        styles.featuredCard,
-        { width: FEATURE_CARD_WIDTH }
-      ]}
-      onPress={item.onPress}
-    >
-      <View style={styles.featuredContent}>
-        <View style={styles.featuredIconContainer}>
-          <Icon name={item.icon} size={24} color="#FFFFFF" />
-        </View>
-        <View style={styles.featuredTextContainer}>
-          <Text style={styles.featuredTitle}>{item.title}</Text>
-          <Text style={styles.featuredDescription}>{item.description}</Text>
-        </View>
-        <Button
-          title={item.buttonText}
-          size="small"
-          rightIcon="arrow-right"
-          onPress={item.onPress}
-          style={styles.featuredButton}
-          gradient={['#FFFFFF33', '#FFFFFF20']}
-          textStyle={{ color: '#FFFFFF' }}
-        />
-      </View>
-    </Card>
-  );
-
   return (
     <SafeAreaView 
       style={[styles.container, { backgroundColor: theme.colors.background }]} 
- 
+      edges={['top']}
     >
       <StatusBar
         barStyle={isDarkMode ? 'light-content' : 'dark-content'}
@@ -339,7 +302,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               Good Morning
             </Text>
             <Text style={[styles.username, { color: theme.colors.text }]}>
-              Sarah
+              {userData?.name || 'User'}
             </Text>
           </View>
           <View style={styles.headerRight}>
@@ -371,56 +334,22 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingBottom: Platform.OS === 'ios' ? scale(40) : scale(20) }
-        ]}
+        contentContainerStyle={styles.scrollContent}
         onScroll={Animated.event(
           [{ nativeEvent: { contentOffset: { y: scrollY } } }],
           { useNativeDriver: false }
         )}
         scrollEventThrottle={16}
       >
-        {/* Featured Carousel */}
-        <View style={styles.featuredContainer}>
-          <FlatList
-            data={featuredItems}
-            renderItem={renderFeaturedItem}
-            keyExtractor={(item) => item.id.toString()}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            pagingEnabled
-            snapToInterval={FEATURE_CARD_WIDTH + scale(16)}
-            decelerationRate="fast"
-            contentContainerStyle={styles.featuredList}
-            onMomentumScrollEnd={(event) => {
-              const newIndex = Math.round(
-                event.nativeEvent.contentOffset.x / (FEATURE_CARD_WIDTH + scale(16))
-              );
-              setFeaturedIndex(newIndex);
-            }}
-            initialScrollIndex={featuredIndex}
-            getItemLayout={(data, index) => ({
-              length: FEATURE_CARD_WIDTH + scale(16),
-              offset: (FEATURE_CARD_WIDTH + scale(16)) * index,
-              index,
-            })}
+        {/* Feature Slider Section */}
+        <View style={styles.sectionContainer}>
+        
+          <SliderComponent 
+            data={featuredItems} 
+            onItemPress={handleFeaturePress} 
+            sliderType="feature"
+            cardHeight={scale(200)}
           />
-          <View style={styles.paginationContainer}>
-            {featuredItems.map((_, index) => (
-              <View
-                key={index}
-                style={[
-                  styles.paginationDot,
-                  {
-                    backgroundColor: index === featuredIndex 
-                      ? theme.colors.primary 
-                      : `${theme.colors.primary}50`,
-                  },
-                ]}
-              />
-            ))}
-          </View>
         </View>
         
         {/* Categories */}
@@ -457,13 +386,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               </Text>
             </TouchableOpacity>
           </View>
-          <FlatList
+          <SliderComponent
             data={learningPaths}
-            renderItem={renderLearningPath}
-            keyExtractor={(item) => item.id.toString()}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.learningPathsList}
+            onItemPress={() => navigation.navigate('Study')}
+            sliderType="learning"
+            cardWidth={scale(260)}
+            cardHeight={scale(150)}
           />
         </View>
         
@@ -479,15 +407,42 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               </Text>
             </TouchableOpacity>
           </View>
-          <FlatList
-            data={popularGames}
-            renderItem={renderGameCard}
-            keyExtractor={(item) => item.id.toString()}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.gamesList}
-          />
+          <View style={styles.gamesRow}>
+            {popularGames.slice(0, 2).map((game) => (
+              <GameCard
+                key={game.id}
+                id={game.id}
+                title={game.title}
+                description={game.description}
+                image={game.image}
+                gradient={game.gradient}
+                level={game.level}
+                onPress={() => navigation.navigate('Games', { screen: game.navigateTo })}
+                width={CARD_WIDTH}
+                height={scale(220)}
+              />
+            ))}
+          </View>
+          <View style={styles.gamesRow}>
+            {popularGames.slice(2, 4).map((game) => (
+              <GameCard
+                key={game.id}
+                id={game.id}
+                title={game.title}
+                description={game.description}
+                image={game.image}
+                gradient={game.gradient}
+                level={game.level}
+                onPress={() => navigation.navigate('Games', { screen: game.navigateTo })}
+                width={CARD_WIDTH}
+                height={scale(220)}
+              />
+            ))}
+          </View>
         </View>
+        
+        {/* Add padding at the bottom to prevent content from being hidden behind tab bar */}
+        <View style={{ height: scale(100) }} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -498,20 +453,22 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerContainer: {
-
+    paddingHorizontal: scale(20),
+    zIndex: 10,
+    marginBottom: 0,
   },
   headerContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: scale(8),
+    marginTop: scale(4),
   },
   headerTitle: {
     fontSize: fontScale(18),
     fontWeight: 'bold',
     textAlign: 'center',
     position: 'absolute',
-    bottom: scale(15),
+    bottom: scale(5),
     left: 0,
     right: 0,
   },
@@ -541,79 +498,26 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   scrollContent: {
-    paddingTop: scale(130),
-    paddingBottom: scale(20),
-  },
-  featuredContainer: {
-    marginBottom: scale(20),
-  },
-  featuredList: {
-    paddingHorizontal: scale(16),
-  },
-  featuredCard: {
-    marginHorizontal: scale(8),
-    height: scale(160),
-  },
-  featuredContent: {
-    flex: 1,
-    padding: scale(16),
-  },
-  featuredIconContainer: {
-    width: scale(40),
-    height: scale(40),
-    borderRadius: scale(20),
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: scale(8),
-  },
-  featuredTextContainer: {
-    flex: 1,
-  },
-  featuredTitle: {
-    fontSize: fontScale(18),
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: scale(4),
-  },
-  featuredDescription: {
-    fontSize: fontScale(14),
-    color: 'rgba(255, 255, 255, 0.8)',
-  },
-  featuredButton: {
-    alignSelf: 'flex-start',
-    marginTop: scale(8),
-    borderRadius: scale(16),
-  },
-  paginationContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: scale(12),
-  },
-  paginationDot: {
-    width: scale(8),
-    height: scale(8),
-    borderRadius: scale(4),
-    marginHorizontal: scale(4),
+    paddingTop: 0, // No gap between header and content
   },
   sectionContainer: {
-    marginBottom: scale(20),
+    marginVertical: scale(12), // Increased vertical margins for better spacing
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: scale(16),
-    marginBottom: scale(12),
+    marginBottom: scale(12), // Increased margin
   },
   sectionTitle: {
-    fontSize: fontScale(18),
+    fontSize: fontScale(22), // Larger font for section titles
     fontWeight: 'bold',
   },
   seeAllText: {
     fontSize: fontScale(14),
     fontWeight: '500',
+    color: '#6200EE', // Keep this purple for highlighting
   },
   categoriesList: {
     paddingHorizontal: scale(16),
@@ -651,103 +555,17 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     textAlign: 'center',
   },
-  learningPathsList: {
+  gamesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     paddingHorizontal: scale(16),
+    justifyContent: 'space-between',
   },
-  learningPathCard: {
-    width: scale(260),
-    height: scale(150),
-    marginRight: scale(12),
-  },
-  learningPathContent: {
-    flex: 1,
-    padding: scale(16),
-  },
-  learningPathTitle: {
-    fontSize: fontScale(16),
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: scale(8),
-  },
-  lessonInfo: {
-    flex: 1,
-  },
-  lessonCount: {
-    fontSize: fontScale(14),
-    color: 'rgba(255, 255, 255, 0.8)',
-    marginBottom: scale(4),
-  },
-  progressContainer: {
-    marginTop: scale(8),
-  },
-  progressText: {
-    fontSize: fontScale(12),
-    color: 'rgba(255, 255, 255, 0.8)',
-    marginBottom: scale(4),
-  },
-  progressBar: {
-    height: scale(6),
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: scale(3),
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: scale(3),
-  },
-  continueButton: {
-    alignSelf: 'flex-start',
-    marginTop: scale(8),
-  },
-  gamesList: {
+  gamesRow: {
+    flexDirection: 'row',
     paddingHorizontal: scale(16),
-  },
-  gameCard: {
-    width: CARD_WIDTH,
-    marginRight: scale(12),
-  },
-  gameCardContent: {
-    alignItems: 'center',
-    padding: scale(12),
-  },
-  gameImage: {
-    width: scale(60),
-    height: scale(60),
-    borderRadius: scale(30),
-    marginBottom: scale(8),
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  gameInfo: {
-    alignItems: 'center',
-  },
-  gameTitle: {
-    fontSize: fontScale(14),
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: scale(4),
-    textAlign: 'center',
-  },
-  levelBadge: {
-    paddingHorizontal: scale(8),
-    paddingVertical: scale(2),
-    borderRadius: scale(10),
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  levelText: {
-    fontSize: fontScale(10),
-    color: '#FFFFFF',
-  },
-  playButton: {
-    position: 'absolute',
-    top: scale(12),
-    right: scale(12),
-    width: scale(28),
-    height: scale(28),
-    borderRadius: scale(14),
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: scale(16),
   },
 });
 
