@@ -5,6 +5,7 @@ import { CommonActions } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { Platform, View, StyleSheet } from 'react-native';
 import { scale } from '../utils/responsive';
+import { useTheme } from '../context/ThemeContext';
 
 // Import screens
 import HomeScreen from '../screens/HomeScreen';
@@ -56,7 +57,7 @@ const GamesStack = () => (
 );
 
 const StudyStack = () => (
-  <Stack.Navigator screenOptions={{ headerShown: false }}>
+  <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="StudyScreen">
     <Stack.Screen name="StudyScreen" component={StudyScreen} />
     <Stack.Screen name="Lectures" component={LecturesScreen} />
     <Stack.Screen name="TestSeries" component={TestSeriesScreen} />
@@ -78,6 +79,8 @@ const LeaderboardStack = () => (
 );
 
 const AppNavigator = () => {
+  const { theme, isDarkMode } = useTheme();
+  
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -98,11 +101,11 @@ const AppNavigator = () => {
 
           return <Icon name={iconName} size={size} color={color} />;
         },
-        tabBarActiveTintColor: '#6200EE',
-        tabBarInactiveTintColor: 'gray',
+        tabBarActiveTintColor: theme.colors.primary,
+        tabBarInactiveTintColor: isDarkMode ? '#999999' : '#888888',
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: '#000000',
+          backgroundColor: isDarkMode ? '#1E1E1E' : '#F5F5F5', // Light gray in light mode
           paddingBottom: Platform.OS === 'ios' ? scale(20) : scale(5),
           paddingTop: scale(5),
           height: Platform.OS === 'ios' ? scale(80) : scale(60),
@@ -117,7 +120,7 @@ const AppNavigator = () => {
           marginBottom: Platform.OS === 'ios' ? scale(5) : 0,
         },
         tabBarBackground: () => (
-          <View style={styles.tabBarBackground} />
+          <View style={[styles.tabBarBackground, { backgroundColor: isDarkMode ? '#1E1E1E' : '#F5F5F5' }]} />
         ),
       })}
       initialRouteName="Home"
@@ -148,7 +151,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: '#000000',
   }
 });
 

@@ -28,7 +28,7 @@ const MainNavigator = () => {
         tabBarActiveTintColor: theme.primary,
         tabBarInactiveTintColor: theme.tabBarInactive,
         tabBarStyle: {
-          backgroundColor: theme.cardBackground,
+          backgroundColor: isDarkMode ? '#1E1E1E' : theme.cardBackground,
           borderTopColor: theme.border,
           height: Platform.OS === 'ios' ? 90 : 70,
           paddingBottom: Platform.OS === 'ios' ? 25 : 10,

@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { GamesScreenProps, GamesStackParamList } from '../types/navigation';
+import { useTheme } from '../context/ThemeContext';
 
 type GameCategoryType = {
   id: string;
@@ -38,10 +39,12 @@ const GameCard = ({
   diamonds,
   onPress,
 }: GameCardProps) => {
+  const { isDarkMode } = useTheme();
+  
   return (
     <TouchableOpacity style={styles.gameCardContainer} onPress={onPress} activeOpacity={0.9}>
       <LinearGradient
-        colors={[color1, color2]}
+        colors={isDarkMode ? [color1, color2] : [color1, color2]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.gameCardGradient}
@@ -56,7 +59,7 @@ const GameCard = ({
           source={require('../assets/images/placeholder-avatar.png')} 
           style={styles.gameCardImage} 
         />
-        <Text style={styles.gameCardTitle}>{title}</Text>
+        <Text style={styles.gameCardTitle} numberOfLines={2} ellipsizeMode="tail">{title}</Text>
         <View style={styles.playButtonContainer}>
           <View style={styles.playButton}>
             <Text style={styles.playButtonText}>PLAY</Text>
@@ -69,6 +72,7 @@ const GameCard = ({
 
 const GamesScreen = ({ navigation }: GamesScreenProps) => {
   const { width } = useWindowDimensions();
+  const { theme, isDarkMode } = useTheme();
 
   const categories: GameCategoryType[] = [
     { id: 'math', name: 'Math', icon: require('../assets/images/placeholder-avatar.png') },
@@ -137,25 +141,25 @@ const GamesScreen = ({ navigation }: GamesScreenProps) => {
 
   const renderCategoryItem = ({ item }: { item: GameCategoryType }) => (
     <TouchableOpacity style={styles.categoryItem}>
-      <View style={styles.categoryIconContainer}>
+      <View style={[styles.categoryIconContainer, { backgroundColor: isDarkMode ? '#333333' : '#F0E6FF' }]}>
         <Image source={item.icon} style={styles.categoryIcon} />
       </View>
-      <Text style={styles.categoryText}>{item.name}</Text>
+      <Text style={[styles.categoryText, { color: theme.colors.text }]}>{item.name}</Text>
     </TouchableOpacity>
   );
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={['top']}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>What do you want to play today?</Text>
-          <View style={styles.diamondContainer}>
+          <Text style={[styles.headerTitle, { color: theme.colors.text }]}>What do you want to play today?</Text>
+          <View style={[styles.diamondContainer, { backgroundColor: theme.colors.primary }]}>
             <Icon name="diamond-stone" size={16} color="#FFFFFF" />
             <Text style={styles.diamondCountText}>22</Text>
           </View>
         </View>
 
-        <Text style={styles.sectionTitle}>RECENT</Text>
+        <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary }]}>RECENT</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.recentGamesContainer}>
           {recentGames.map((game) => (
             <TouchableOpacity 
@@ -170,16 +174,13 @@ const GamesScreen = ({ navigation }: GamesScreenProps) => {
                 end={{ x: 1, y: 0 }}
               >
                 <View style={styles.recentGameContent}>
-                  <View>
-                    <Text style={styles.recentGameTitle}>{game.title}</Text>
+                  <View style={styles.recentGameInfo}>
+                    <Text style={styles.recentGameTitle} numberOfLines={2} ellipsizeMode="tail">{game.title}</Text>
                     <Image 
                       source={require('../assets/images/placeholder-avatar.png')} 
                       style={styles.recentGameImage} 
                     />
                   </View>
-                  <TouchableOpacity style={styles.recentGamePlayButton}>
-                    <Text style={styles.recentGamePlayText}>PLAY</Text>
-                  </TouchableOpacity>
                 </View>
               </LinearGradient>
             </TouchableOpacity>
@@ -188,9 +189,9 @@ const GamesScreen = ({ navigation }: GamesScreenProps) => {
 
         <View style={styles.categoriesSection}>
           <View style={styles.categoriesHeader}>
-            <Text style={styles.sectionTitle}>CATEGORIES</Text>
+            <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary }]}>CATEGORIES</Text>
             <TouchableOpacity>
-              <Text style={styles.seeAllText}>See all →</Text>
+              <Text style={[styles.seeAllText, { color: theme.colors.primary }]}>See all →</Text>
             </TouchableOpacity>
           </View>
           <FlatList
@@ -203,7 +204,7 @@ const GamesScreen = ({ navigation }: GamesScreenProps) => {
           />
         </View>
 
-        <Text style={styles.sectionTitle}>NEW GAMES</Text>
+        <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary }]}>NEW GAMES</Text>
         <View style={styles.gameCardsContainer}>
           {newGames.map((game) => (
             <GameCard
@@ -225,7 +226,6 @@ const GamesScreen = ({ navigation }: GamesScreenProps) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
   },
   scrollView: {
     flex: 1,
@@ -241,13 +241,11 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#333',
     width: '75%',
   },
   diamondContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#6200EE',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
@@ -260,7 +258,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 14,
     fontWeight: 'bold',
-    color: '#666',
     marginBottom: 15,
   },
   recentGamesContainer: {
@@ -281,11 +278,16 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'space-between',
   },
+  recentGameInfo: {
+    flex: 1,
+    justifyContent: 'space-between',
+  },
   recentGameTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#FFFFFF',
     marginBottom: 10,
+    maxWidth: '90%',
   },
   recentGameImage: {
     width: 50,
@@ -315,7 +317,6 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   seeAllText: {
-    color: '#6200EE',
     fontWeight: '500',
   },
   categoriesList: {
@@ -330,7 +331,6 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#F0E6FF',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 8,
@@ -342,7 +342,6 @@ const styles = StyleSheet.create({
   },
   categoryText: {
     fontSize: 12,
-    color: '#333',
     textAlign: 'center',
   },
   gameCardsContainer: {
@@ -391,6 +390,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#FFFFFF',
     marginBottom: 10,
+    maxWidth: '100%',
   },
   playButtonContainer: {
     alignItems: 'center',

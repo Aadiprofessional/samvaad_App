@@ -12,10 +12,12 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import LinearGradient from 'react-native-linear-gradient';
+import { useTheme } from '../context/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
 const TranslatorScreen = () => {
+  const { theme, isDarkMode } = useTheme();
   const [mode, setMode] = useState<'camera' | 'history' | 'learn'>('camera');
   const [cameraActive, setCameraActive] = useState(false);
   const [translatedText, setTranslatedText] = useState<string>('');
@@ -104,24 +106,33 @@ const TranslatorScreen = () => {
           </View>
         </View>
       ) : (
-        <View style={styles.inactiveCamera}>
-          <Icon name="camera" size={50} color="#CCCCCC" />
-          <Text style={styles.inactiveCameraText}>Tap the camera button to start translating</Text>
+        <View style={[styles.inactiveCamera, { backgroundColor: isDarkMode ? '#1E1E1E' : '#F5F5F5' }]}>
+          <Icon name="camera" size={50} color={isDarkMode ? '#555555' : '#CCCCCC'} />
+          <Text style={[styles.inactiveCameraText, { color: theme.colors.textSecondary }]}>
+            Tap the camera button to start translating
+          </Text>
         </View>
       )}
 
       <View style={styles.cameraControls}>
-        <TouchableOpacity style={styles.cameraButton} onPress={handleImageUpload}>
-          <Icon name="image" size={24} color="#6200EE" />
+        <TouchableOpacity 
+          style={[styles.cameraButton, { backgroundColor: isDarkMode ? '#333333' : '#F0E6FF' }]} 
+          onPress={handleImageUpload}
+        >
+          <Icon name="image" size={24} color={theme.colors.primary} />
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.cameraTriggerButton, cameraActive && styles.cameraTriggerButtonActive]}
+          style={[
+            styles.cameraTriggerButton, 
+            { backgroundColor: isDarkMode ? theme.colors.primary : '#6200EE' },
+            cameraActive && [styles.cameraTriggerButtonActive, { borderColor: isDarkMode ? '#FF5252' : '#FF5252' }]
+          ]}
           onPress={handleCameraToggle}
         >
           <Icon name="camera" size={30} color={cameraActive ? '#FF5252' : '#FFFFFF'} />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.cameraButton}>
-          <Icon name="cog" size={24} color="#6200EE" />
+        <TouchableOpacity style={[styles.cameraButton, { backgroundColor: isDarkMode ? '#333333' : '#F0E6FF' }]}>
+          <Icon name="cog" size={24} color={theme.colors.primary} />
         </TouchableOpacity>
       </View>
     </View>
@@ -129,16 +140,16 @@ const TranslatorScreen = () => {
 
   const renderHistoryView = () => (
     <ScrollView style={styles.historyContainer} showsVerticalScrollIndicator={false}>
-      <Text style={styles.historyTitle}>Translation History</Text>
+      <Text style={[styles.historyTitle, { color: theme.colors.text }]}>Translation History</Text>
       {translationHistory.map((item) => (
-        <View key={item.id} style={styles.historyItem}>
+        <View key={item.id} style={[styles.historyItem, { backgroundColor: isDarkMode ? '#1E1E1E' : '#FFFFFF' }]}>
           <View style={styles.historyItemHeader}>
-            <Text style={styles.historyItemTimestamp}>{item.timestamp}</Text>
+            <Text style={[styles.historyItemTimestamp, { color: theme.colors.textSecondary }]}>{item.timestamp}</Text>
             <TouchableOpacity>
-              <Icon name="content-copy" size={18} color="#6200EE" />
+              <Icon name="content-copy" size={18} color={theme.colors.primary} />
             </TouchableOpacity>
           </View>
-          <Text style={styles.historyItemText}>{item.text}</Text>
+          <Text style={[styles.historyItemText, { color: theme.colors.text }]}>{item.text}</Text>
         </View>
       ))}
     </ScrollView>
@@ -146,18 +157,18 @@ const TranslatorScreen = () => {
 
   const renderLearnView = () => (
     <ScrollView style={styles.learnContainer} showsVerticalScrollIndicator={false}>
-      <Text style={styles.learnTitle}>Learn Sign Language</Text>
-      <Text style={styles.learnSubtitle}>
+      <Text style={[styles.learnTitle, { color: theme.colors.text }]}>Learn Sign Language</Text>
+      <Text style={[styles.learnSubtitle, { color: theme.colors.textSecondary }]}>
         Practice these common signs to improve your sign language skills
       </Text>
 
       <View style={styles.signGrid}>
         {learnSigns.map((sign) => (
-          <TouchableOpacity key={sign.id} style={styles.signItem}>
-            <View style={styles.signImageContainer}>
+          <TouchableOpacity key={sign.id} style={[styles.signItem, { backgroundColor: isDarkMode ? '#1E1E1E' : '#FFFFFF' }]}>
+            <View style={[styles.signImageContainer, { backgroundColor: isDarkMode ? '#333333' : '#F0E6FF' }]}>
               <Image source={sign.image} style={styles.signImage} resizeMode="contain" />
             </View>
-            <Text style={styles.signText}>{sign.sign}</Text>
+            <Text style={[styles.signText, { color: theme.colors.text }]}>{sign.sign}</Text>
           </TouchableOpacity>
         ))}
       </View>
@@ -169,7 +180,7 @@ const TranslatorScreen = () => {
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
         >
-          <Text style={styles.allSignsText}>View All Signs</Text>
+          <Text style={styles.allSignsText} numberOfLines={1} ellipsizeMode="tail">View All Signs</Text>
           <Icon name="chevron-right" size={20} color="#FFFFFF" />
         </LinearGradient>
       </TouchableOpacity>
@@ -177,11 +188,11 @@ const TranslatorScreen = () => {
   );
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.header}>
-        <Text style={styles.screenTitle}>Sign Translator</Text>
-        <TouchableOpacity style={styles.helpButton}>
-          <Icon name="help-circle-outline" size={24} color="#6200EE" />
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={['top']}>
+      <View style={[styles.header, { borderBottomColor: isDarkMode ? '#333333' : '#EEEEEE' }]}>
+        <Text style={[styles.screenTitle, { color: theme.colors.text }]}>Sign Translator</Text>
+        <TouchableOpacity style={[styles.helpButton, { backgroundColor: isDarkMode ? '#333333' : '#F0E6FF' }]}>
+          <Icon name="help-circle-outline" size={24} color={theme.colors.primary} />
         </TouchableOpacity>
       </View>
 
@@ -191,7 +202,7 @@ const TranslatorScreen = () => {
         {mode === 'learn' && renderLearnView()}
       </View>
 
-      <View style={styles.tabBar}>
+      <View style={[styles.tabBar, { backgroundColor: isDarkMode ? '#1E1E1E' : '#FFFFFF', borderTopColor: isDarkMode ? '#333333' : '#EEEEEE' }]}>
         <TouchableOpacity
           style={[styles.tabItem, mode === 'camera' && styles.activeTabItem]}
           onPress={() => setMode('camera')}
@@ -199,11 +210,12 @@ const TranslatorScreen = () => {
           <Icon
             name="camera"
             size={24}
-            color={mode === 'camera' ? '#6200EE' : '#9E9E9E'}
+            color={mode === 'camera' ? theme.colors.primary : '#9E9E9E'}
           />
           <Text
             style={[
               styles.tabText,
+              { color: mode === 'camera' ? theme.colors.primary : '#9E9E9E' },
               mode === 'camera' && styles.activeTabText,
             ]}
           >
@@ -218,11 +230,12 @@ const TranslatorScreen = () => {
           <Icon
             name="history"
             size={24}
-            color={mode === 'history' ? '#6200EE' : '#9E9E9E'}
+            color={mode === 'history' ? theme.colors.primary : '#9E9E9E'}
           />
           <Text
             style={[
               styles.tabText,
+              { color: mode === 'history' ? theme.colors.primary : '#9E9E9E' },
               mode === 'history' && styles.activeTabText,
             ]}
           >
@@ -237,11 +250,12 @@ const TranslatorScreen = () => {
           <Icon
             name="book-open-variant"
             size={24}
-            color={mode === 'learn' ? '#6200EE' : '#9E9E9E'}
+            color={mode === 'learn' ? theme.colors.primary : '#9E9E9E'}
           />
           <Text
             style={[
               styles.tabText,
+              { color: mode === 'learn' ? theme.colors.primary : '#9E9E9E' },
               mode === 'learn' && styles.activeTabText,
             ]}
           >
@@ -256,7 +270,6 @@ const TranslatorScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
   },
   header: {
     flexDirection: 'row',
@@ -265,12 +278,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#EEEEEE',
   },
   screenTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#333333',
   },
   helpButton: {
     width: 40,
@@ -284,32 +295,15 @@ const styles = StyleSheet.create({
   },
   cameraContainer: {
     flex: 1,
-    justifyContent: 'space-between',
-  },
-  inactiveCamera: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F0F0F0',
-    margin: 20,
-    borderRadius: 20,
-  },
-  inactiveCameraText: {
-    marginTop: 15,
-    fontSize: 16,
-    color: '#666666',
-    textAlign: 'center',
-    paddingHorizontal: 40,
+    padding: 20,
   },
   activeCamera: {
     flex: 1,
-    margin: 20,
     borderRadius: 20,
     overflow: 'hidden',
-    position: 'relative',
+    marginBottom: 20,
   },
   cameraPreview: {
-    flex: 1,
     width: '100%',
     height: '100%',
   },
@@ -318,25 +312,36 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
     padding: 15,
   },
   translatedText: {
     color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  inactiveCamera: {
+    flex: 1,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  inactiveCameraText: {
+    marginTop: 15,
+    textAlign: 'center',
     fontSize: 16,
-    fontWeight: '500',
   },
   cameraControls: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
-    paddingVertical: 20,
+    paddingVertical: 10,
   },
   cameraButton: {
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#F0E6FF',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -344,38 +349,26 @@ const styles = StyleSheet.create({
     width: 70,
     height: 70,
     borderRadius: 35,
-    backgroundColor: '#6200EE',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 3,
-    elevation: 5,
+    borderWidth: 3,
+    borderColor: 'transparent',
   },
   cameraTriggerButtonActive: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 2,
-    borderColor: '#FF5252',
+    borderWidth: 3,
   },
   historyContainer: {
     flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 15,
+    padding: 20,
   },
   historyTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
-    color: '#333333',
-    marginBottom: 15,
+    marginBottom: 20,
   },
   historyItem: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
     padding: 15,
+    borderRadius: 10,
     marginBottom: 15,
     shadowColor: '#000',
     shadowOffset: {
@@ -394,99 +387,99 @@ const styles = StyleSheet.create({
   },
   historyItemTimestamp: {
     fontSize: 12,
-    color: '#9E9E9E',
   },
   historyItemText: {
     fontSize: 16,
-    color: '#333333',
   },
   learnContainer: {
     flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 15,
+    padding: 20,
   },
   learnTitle: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: 'bold',
-    color: '#333333',
     marginBottom: 10,
   },
   learnSubtitle: {
-    fontSize: 14,
-    color: '#666666',
-    marginBottom: 25,
-    lineHeight: 20,
+    fontSize: 16,
+    marginBottom: 20,
   },
   signGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-  },
-  signItem: {
-    width: (width - 60) / 4,
-    alignItems: 'center',
     marginBottom: 20,
   },
+  signItem: {
+    width: '23%',
+    aspectRatio: 0.8,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+    padding: 5,
+  },
   signImageContainer: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: '#F0E6FF',
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 8,
-    overflow: 'hidden',
   },
   signImage: {
-    width: '70%',
-    height: '70%',
+    width: 30,
+    height: 30,
   },
   signText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#333333',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   allSignsButton: {
-    marginVertical: 20,
     borderRadius: 25,
     overflow: 'hidden',
+    marginBottom: 20,
   },
   allSignsGradient: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: 12,
+    paddingHorizontal: 20,
   },
   allSignsText: {
     color: '#FFFFFF',
-    fontSize: 16,
     fontWeight: 'bold',
-    marginRight: 5,
+    fontSize: 16,
+    marginRight: 10,
   },
   tabBar: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    backgroundColor: '#FFFFFF',
+    paddingTop: 15,
+    paddingBottom: 15,
     borderTopWidth: 1,
-    borderTopColor: '#EEEEEE',
-    paddingVertical: 10,
   },
   tabItem: {
+    flex: 1,
     alignItems: 'center',
-    paddingVertical: 5,
   },
   activeTabItem: {
-    borderBottomWidth: 3,
-    borderBottomColor: '#6200EE',
+    // Visual indicator for active tab
   },
   tabText: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#9E9E9E',
     marginTop: 5,
+    fontSize: 12,
   },
   activeTabText: {
-    color: '#6200EE',
+    fontWeight: 'bold',
   },
 });
 

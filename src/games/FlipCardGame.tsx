@@ -15,6 +15,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import LinearGradient from 'react-native-linear-gradient';
+import { useTheme } from '../context/ThemeContext';
 
 const { width, height } = Dimensions.get('window');
 
@@ -70,6 +71,7 @@ type CardType = {
 };
 
 const FlipCardGame = ({ navigation, route }: NavigationProps) => {
+  const { theme, isDarkMode } = useTheme();
   const [currentLevel, setCurrentLevel] = useState(1);
   const [score, setScore] = useState(0);
   const [moves, setMoves] = useState(0);
@@ -137,7 +139,7 @@ const FlipCardGame = ({ navigation, route }: NavigationProps) => {
           
           // Check if all cards are matched
           const allMatched = cards.every((card, idx) => 
-            idx === firstIndex || idx === secondIndex || card.matched
+            (idx === firstIndex || idx === secondIndex || card.matched)
           );
           
           if (allMatched) {
@@ -145,13 +147,30 @@ const FlipCardGame = ({ navigation, route }: NavigationProps) => {
           }
         }, 500);
       } else {
-        // No match
+        // No match - flip cards back
         setTimeout(() => {
-          setCards(prev => prev.map((card, idx) => 
-            idx === firstIndex || idx === secondIndex
-              ? { ...card, flipped: false }
-              : card
-          ));
+          // Animate the cards back
+          Animated.parallel([
+            Animated.timing(flipAnimations[firstIndex], {
+              toValue: 0,
+              duration: 300,
+              useNativeDriver: true,
+            }),
+            Animated.timing(flipAnimations[secondIndex], {
+              toValue: 0,
+              duration: 300,
+              useNativeDriver: true,
+            }),
+          ]).start(() => {
+            // Update the cards state after animation
+            setCards(prev => prev.map((card, idx) => 
+              idx === firstIndex || idx === secondIndex
+                ? { ...card, flipped: false }
+                : card
+            ));
+          });
+          
+          // Clear selected cards
           setSelectedCards([]);
         }, 1000);
       }
@@ -256,14 +275,18 @@ const FlipCardGame = ({ navigation, route }: NavigationProps) => {
   };
 
   const resetGame = () => {
+    setGameStarted(false);
+    setGameCompleted(false);
+    setScore(0);
+    setMoves(0);
+    setTimer(0);
+    setCards([]);
+    setSelectedCards([]);
+    
     if (intervalId) {
       clearInterval(intervalId);
       setIntervalId(null);
     }
-    setMoves(0);
-    setTimer(0);
-    setGameStarted(false);
-    setGameCompleted(false);
   };
 
   const pauseGame = () => {
@@ -274,12 +297,11 @@ const FlipCardGame = ({ navigation, route }: NavigationProps) => {
     
     Alert.alert(
       'Game Paused',
-      'Do you want to continue or exit?',
+      'Do you want to continue playing?',
       [
         {
-          text: 'Continue',
+          text: 'Resume',
           onPress: () => {
-            // Resume timer
             const id = setInterval(() => {
               setTimer(prev => prev + 1);
             }, 1000);
@@ -287,28 +309,31 @@ const FlipCardGame = ({ navigation, route }: NavigationProps) => {
           },
         },
         {
-          text: 'Exit',
+          text: 'Quit',
+          onPress: () => {
+            resetGame();
+            navigation.goBack();
+          },
           style: 'cancel',
-          onPress: () => navigation.goBack(),
         },
       ]
     );
   };
 
   const formatTime = (seconds: number) => {
-    const minutes = Math.floor(seconds / 60);
+    const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    return `${mins < 10 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs}`;
   };
 
   const renderCard = (card: CardType & { flipped: boolean, matched: boolean }, index: number) => {
     const frontAnimatedStyle = {
       transform: [
         {
-          rotateY: flipAnimations[index]?.interpolate({
+          rotateY: flipAnimations[index].interpolate({
             inputRange: [0, 1],
             outputRange: ['0deg', '180deg'],
-          }) || '0deg',
+          }),
         },
       ],
     };
@@ -316,10 +341,10 @@ const FlipCardGame = ({ navigation, route }: NavigationProps) => {
     const backAnimatedStyle = {
       transform: [
         {
-          rotateY: flipAnimations[index]?.interpolate({
+          rotateY: flipAnimations[index].interpolate({
             inputRange: [0, 1],
             outputRange: ['180deg', '360deg'],
-          }) || '180deg',
+          }),
         },
       ],
     };
@@ -329,45 +354,45 @@ const FlipCardGame = ({ navigation, route }: NavigationProps) => {
         key={index}
         style={styles.cardContainer}
         onPress={() => handleCardPress(index)}
-        disabled={card.flipped || card.matched}
+        activeOpacity={0.8}
+        disabled={card.matched}
       >
-        <View style={[styles.card, card.matched && styles.matchedCard]}>
-          {/* Card Back */}
-          <Animated.View
-            style={[
-              styles.cardFace,
-              styles.cardBack,
-              card.flipped || card.matched ? { opacity: 0 } : { opacity: 1 },
-              frontAnimatedStyle,
-            ]}
-          >
-            <LinearGradient
-              colors={['#6a11cb', '#2575fc']}
-              style={styles.cardGradient}
-            >
-              <Icon name="help" size={36} color="#fff" />
-            </LinearGradient>
-          </Animated.View>
-
-          {/* Card Front */}
+        <View style={styles.cardWrapper}>
+          {/* Front of card (question mark side) */}
           <Animated.View
             style={[
               styles.cardFace,
               styles.cardFront,
-              card.flipped || card.matched ? { opacity: 1 } : { opacity: 0 },
-              backAnimatedStyle,
+              frontAnimatedStyle,
+              { backgroundColor: isDarkMode ? '#2D2D2D' : '#F5F5F5' },
+              card.matched && styles.cardMatched,
             ]}
           >
-            <LinearGradient
-              colors={['#FFFFFF', '#F0F0F0']}
-              style={styles.cardGradient}
-            >
-              {card.isSymbol ? (
-                <Text style={styles.cardSymbol}>{card.symbol}</Text>
-              ) : (
-                <Text style={styles.cardMeaning}>{card.meaning}</Text>
-              )}
-            </LinearGradient>
+            <View style={styles.questionMarkContainer}>
+              <Text style={[styles.questionMark, { color: theme.colors.primary }]}>?</Text>
+            </View>
+          </Animated.View>
+
+          {/* Back of card (content side) */}
+          <Animated.View
+            style={[
+              styles.cardFace,
+              styles.cardBack,
+              backAnimatedStyle,
+              { backgroundColor: isDarkMode ? '#333333' : '#FFFFFF' },
+              card.matched && styles.cardMatched,
+            ]}
+          >
+            {card.isSymbol ? (
+              <View style={styles.cardContent}>
+                <Image source={card.image} style={styles.cardImage} />
+                <Text style={[styles.cardSymbol, { color: theme.colors.text }]}>{card.symbol}</Text>
+              </View>
+            ) : (
+              <View style={styles.cardContent}>
+                <Text style={[styles.cardMeaning, { color: theme.colors.text }]}>{card.meaning}</Text>
+              </View>
+            )}
           </Animated.View>
         </View>
       </TouchableOpacity>
@@ -375,48 +400,69 @@ const FlipCardGame = ({ navigation, route }: NavigationProps) => {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => gameStarted ? pauseGame() : navigation.goBack()} style={styles.backButton}>
-          <Icon name="arrow-left" size={24} color="#6200EE" />
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={['top']}>
+      <View style={[styles.header, { borderBottomColor: isDarkMode ? '#333333' : '#EEEEEE' }]}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={[styles.headerButton, { backgroundColor: isDarkMode ? '#333333' : '#F0E6FF' }]}>
+          <Icon name="arrow-left" size={24} color={theme.colors.primary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Flip Card Game</Text>
-        <TouchableOpacity style={styles.infoButton} onPress={() => gameStarted && pauseGame()}>
-          <Icon name="pause" size={24} color="#6200EE" />
+        <Text style={[styles.headerTitle, { color: theme.colors.text }]}>Flip Card Game</Text>
+        <TouchableOpacity onPress={pauseGame} style={[styles.headerButton, { backgroundColor: isDarkMode ? '#333333' : '#F0E6FF' }]}>
+          <Icon name={gameStarted ? "pause" : "information"} size={24} color={theme.colors.primary} />
         </TouchableOpacity>
       </View>
 
-      {gameStarted && (
-        <View style={styles.gameInfo}>
-          <View style={styles.infoItem}>
-            <Icon name="trophy" size={20} color="#6200EE" />
-            <Text style={styles.infoText}>{score}</Text>
+      {gameStarted ? (
+        <>
+          <View style={styles.gameInfo}>
+            <View style={[styles.infoItem, { backgroundColor: isDarkMode ? '#1E1E1E' : '#FFFFFF' }]}>
+              <Text style={[styles.infoLabel, { color: theme.colors.textSecondary }]}>Level</Text>
+              <Text style={[styles.infoValue, { color: theme.colors.text }]}>{currentLevel}</Text>
+            </View>
+            <View style={[styles.infoItem, { backgroundColor: isDarkMode ? '#1E1E1E' : '#FFFFFF' }]}>
+              <Text style={[styles.infoLabel, { color: theme.colors.textSecondary }]}>Score</Text>
+              <Text style={[styles.infoValue, { color: theme.colors.text }]}>{score}</Text>
+            </View>
+            <View style={[styles.infoItem, { backgroundColor: isDarkMode ? '#1E1E1E' : '#FFFFFF' }]}>
+              <Text style={[styles.infoLabel, { color: theme.colors.textSecondary }]}>Time</Text>
+              <Text style={[styles.infoValue, { color: theme.colors.text }]}>{formatTime(timer)}</Text>
+            </View>
+            <View style={[styles.infoItem, { backgroundColor: isDarkMode ? '#1E1E1E' : '#FFFFFF' }]}>
+              <Text style={[styles.infoLabel, { color: theme.colors.textSecondary }]}>Moves</Text>
+              <Text style={[styles.infoValue, { color: theme.colors.text }]}>{moves}</Text>
+            </View>
           </View>
-          <View style={styles.infoItem}>
-            <Icon name="counter" size={20} color="#6200EE" />
-            <Text style={styles.infoText}>{moves}</Text>
-          </View>
-          <View style={styles.infoItem}>
-            <Icon name="clock-outline" size={20} color="#6200EE" />
-            <Text style={styles.infoText}>{formatTime(timer)}</Text>
-          </View>
-          <View style={styles.levelBadge}>
-            <Text style={styles.levelText}>Level {currentLevel}</Text>
-          </View>
-        </View>
-      )}
 
-      {!gameStarted ? (
-        <View style={styles.startContainer}>
-          <Text style={styles.startTitle}>Flip Card Game</Text>
-          <Text style={styles.startSubtitle}>Level {currentLevel}</Text>
-          <Text style={styles.startDescription}>
-            Match sign language symbols with their meanings. Find all pairs to complete the level!
+          <ScrollView contentContainerStyle={styles.gameContent}>
+            <View style={styles.cardsContainer}>
+              {cards.map((card, index) => renderCard(card, index))}
+            </View>
+          </ScrollView>
+        </>
+      ) : (
+        <View style={styles.welcomeContainer}>
+          <Image 
+            source={require('../assets/images/placeholder-avatar.png')} 
+            style={styles.welcomeImage} 
+          />
+          
+          <Text style={[styles.welcomeTitle, { color: theme.colors.text }]}>Flip Card Game</Text>
+          <Text style={[styles.welcomeDescription, { color: theme.colors.textSecondary }]}>
+            Match the sign language symbols with their meanings. Flip cards to find matching pairs!
           </Text>
+          
+          <View style={styles.levelInfo}>
+            <Text style={[styles.levelInfoText, { color: theme.colors.text }]}>
+              You are on Level {currentLevel}
+            </Text>
+            <Text style={[styles.levelInfoSubtext, { color: theme.colors.textSecondary }]}>
+              Complete levels to unlock more challenges
+            </Text>
+          </View>
+          
           <TouchableOpacity style={styles.startButton} onPress={startGame}>
             <LinearGradient
               colors={['#6a11cb', '#2575fc']}
-              style={styles.gradient}
+              style={styles.startButtonGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
             >
@@ -424,12 +470,6 @@ const FlipCardGame = ({ navigation, route }: NavigationProps) => {
             </LinearGradient>
           </TouchableOpacity>
         </View>
-      ) : (
-        <ScrollView contentContainerStyle={styles.gameContainer}>
-          <View style={styles.cardsGrid}>
-            {cards.map((card, index) => renderCard(card, index))}
-          </View>
-        </ScrollView>
       )}
     </SafeAreaView>
   );
@@ -438,7 +478,6 @@ const FlipCardGame = ({ navigation, route }: NavigationProps) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
   },
   header: {
     flexDirection: 'row',
@@ -447,154 +486,179 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#EEEEEE',
+  },
+  headerButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333333',
-  },
-  backButton: {
-    padding: 5,
-  },
-  infoButton: {
-    padding: 5,
   },
   gameInfo: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#EEEEEE',
+    padding: 15,
   },
   infoItem: {
-    flexDirection: 'row',
+    width: '22%',
+    borderRadius: 10,
+    padding: 10,
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
-  infoText: {
-    marginLeft: 5,
+  infoLabel: {
+    fontSize: 12,
+    marginBottom: 5,
+  },
+  infoValue: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#333333',
   },
-  levelBadge: {
-    backgroundColor: '#6200EE',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 15,
+  gameContent: {
+    paddingVertical: 20,
+    paddingHorizontal: 15,
   },
-  levelText: {
+  cardsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  cardContainer: {
+    width: width / 2 - 25,
+    height: width / 2 - 25,
+    marginBottom: 20,
+  },
+  cardWrapper: {
+    width: '100%',
+    height: '100%',
+    position: 'relative',
+  },
+  cardFace: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 10,
+    position: 'absolute',
+    backfaceVisibility: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  cardFront: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cardBack: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cardMatched: {
+    opacity: 0.7,
+  },
+  questionMarkContainer: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: '#B39DDB',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  questionMark: {
+    fontSize: 48,
+    fontWeight: 'bold',
     color: '#FFFFFF',
-    fontSize: 14,
+  },
+  cardContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 10,
+    width: '100%',
+    height: '100%',
+  },
+  cardImage: {
+    width: 60,
+    height: 60,
+    resizeMode: 'contain',
+    marginBottom: 10,
+  },
+  cardSymbol: {
+    fontSize: 28,
     fontWeight: 'bold',
   },
-  startContainer: {
+  cardMeaning: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  welcomeContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 20,
+    padding: 20,
   },
-  startTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333333',
-    marginBottom: 10,
-  },
-  startSubtitle: {
-    fontSize: 20,
-    color: '#6200EE',
+  welcomeImage: {
+    width: 150,
+    height: 150,
     marginBottom: 20,
   },
-  startDescription: {
+  welcomeTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    marginBottom: 15,
+  },
+  welcomeDescription: {
     fontSize: 16,
-    color: '#666666',
     textAlign: 'center',
     marginBottom: 30,
   },
+  levelInfo: {
+    alignItems: 'center',
+    marginBottom: 30,
+    backgroundColor: 'rgba(179, 157, 219, 0.1)',
+    padding: 15,
+    borderRadius: 10,
+    width: '100%',
+  },
+  levelInfoText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 5,
+  },
+  levelInfoSubtext: {
+    fontSize: 14,
+    textAlign: 'center',
+  },
   startButton: {
-    width: '80%',
+    width: width - 60,
     height: 50,
     borderRadius: 25,
     overflow: 'hidden',
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
   },
-  gradient: {
+  startButtonGradient: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
   startButtonText: {
-    color: '#FFFFFF',
+    color: 'white',
     fontSize: 18,
     fontWeight: 'bold',
   },
-  gameContainer: {
-    padding: 10,
-  },
-  cardsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-  },
-  cardContainer: {
-    width: width / 3 - 20,
-    height: width / 3 - 20,
-    margin: 8,
-  },
-  card: {
-    flex: 1,
-    borderRadius: 8,
-    overflow: 'hidden',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 1.5,
-  },
-  matchedCard: {
-    opacity: 0.7,
-  },
-  cardFace: {
-    position: 'absolute',
-    width: '100%',
-    height: '100%',
-    backfaceVisibility: 'hidden',
-  },
-  cardBack: {
-    backgroundColor: '#6200EE',
-  },
-  cardFront: {
-    backgroundColor: '#FFFFFF',
-  },
-  cardGradient: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  cardSymbol: {
-    fontSize: 36,
-    fontWeight: 'bold',
-    color: '#333333',
-  },
-  cardMeaning: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333333',
-    textAlign: 'center',
-    padding: 5,
-  },
-  unityContainer: {
-    flex: 1,
-  },
-  unityView: {
-    flex: 1,
-  },
 });
 
-export default FlipCardGame; 
+export default FlipCardGame;

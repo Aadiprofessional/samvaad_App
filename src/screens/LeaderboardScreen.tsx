@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import LinearGradient from 'react-native-linear-gradient';
+import { useTheme } from '../context/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
@@ -261,6 +262,7 @@ type TabsType = 'ranking' | 'stats' | 'achievements';
 const LeaderboardScreen = () => {
   const [activeTab, setActiveTab] = useState<TabsType>('ranking');
   const [timeFilter, setTimeFilter] = useState<'week' | 'month' | 'all'>('week');
+  const { theme, isDarkMode } = useTheme();
   
   // Current user - in a real app, this would come from an auth system
   const currentUser = {
@@ -279,7 +281,8 @@ const LeaderboardScreen = () => {
       <View 
         style={[
           styles.rankItem,
-          isCurrentUser && styles.currentUserRankItem
+          { backgroundColor: isDarkMode ? '#1E1E1E' : '#FFFFFF' },
+          isCurrentUser && [styles.currentUserRankItem, { backgroundColor: isDarkMode ? '#333333' : '#F0E6FF' }]
         ]}
       >
         <View style={styles.rankPosition}>
@@ -293,17 +296,17 @@ const LeaderboardScreen = () => {
               <Text style={styles.topRankText}>{item.rank}</Text>
             </View>
           ) : (
-            <Text style={styles.rankPositionText}>{item.rank}</Text>
+            <Text style={[styles.rankPositionText, { color: theme.colors.text }]}>{item.rank}</Text>
           )}
         </View>
         
         <Image source={item.avatar} style={styles.userAvatar} />
         
         <View style={styles.userInfo}>
-          <Text style={[styles.userName, isCurrentUser && styles.currentUserText]}>
+          <Text style={[styles.userName, { color: theme.colors.text }, isCurrentUser && styles.currentUserText]} numberOfLines={1} ellipsizeMode="tail">
             {item.name} {isCurrentUser && '(You)'}
           </Text>
-          <Text style={styles.userScore}>{item.score.toLocaleString()} pts</Text>
+          <Text style={[styles.userScore, { color: theme.colors.textSecondary }]}>{item.score.toLocaleString()} pts</Text>
         </View>
         
         <View style={styles.rankChange}>
@@ -316,7 +319,7 @@ const LeaderboardScreen = () => {
   };
 
   const renderGameStatItem = ({ item }: { item: GameStatsType }) => (
-    <View style={styles.gameStatItem}>
+    <View style={[styles.gameStatItem, { backgroundColor: isDarkMode ? '#1E1E1E' : '#FFFFFF' }]}>
       <LinearGradient
         colors={[item.color1, item.color2]}
         style={styles.gameStatHeader}
@@ -324,27 +327,27 @@ const LeaderboardScreen = () => {
         end={{ x: 1, y: 0 }}
       >
         <Icon name={item.icon} size={24} color="#FFFFFF" />
-        <Text style={styles.gameStatName}>{item.name}</Text>
+        <Text style={styles.gameStatName} numberOfLines={1} ellipsizeMode="tail">{item.name}</Text>
       </LinearGradient>
       
       <View style={styles.gameStatContent}>
         <View style={styles.gameStatRow}>
-          <Text style={styles.gameStatLabel}>Current Score:</Text>
-          <Text style={styles.gameStatValue}>{item.score}</Text>
+          <Text style={[styles.gameStatLabel, { color: theme.colors.text }]}>Current Score:</Text>
+          <Text style={[styles.gameStatValue, { color: theme.colors.text }]}>{item.score}</Text>
         </View>
         
         <View style={styles.gameStatRow}>
-          <Text style={styles.gameStatLabel}>High Score:</Text>
-          <Text style={styles.gameStatValue}>{item.highScore}</Text>
+          <Text style={[styles.gameStatLabel, { color: theme.colors.text }]}>High Score:</Text>
+          <Text style={[styles.gameStatValue, { color: theme.colors.text }]}>{item.highScore}</Text>
         </View>
         
         <View style={styles.gameStatProgressContainer}>
           <View style={styles.gameStatProgressLabel}>
-            <Text style={styles.gameStatProgressText}>Completion</Text>
-            <Text style={styles.gameStatProgressPercent}>{item.completionRate}%</Text>
+            <Text style={[styles.gameStatProgressText, { color: theme.colors.text }]}>Completion</Text>
+            <Text style={[styles.gameStatProgressPercent, { color: theme.colors.text }]}>{item.completionRate}%</Text>
           </View>
           
-          <View style={styles.gameStatProgressBar}>
+          <View style={[styles.gameStatProgressBar, { backgroundColor: isDarkMode ? '#333333' : '#EEEEEE' }]}>
             <View 
               style={[
                 styles.gameStatProgressFill,
@@ -359,7 +362,7 @@ const LeaderboardScreen = () => {
   );
 
   const renderAchievementItem = ({ item }: { item: AchievementType }) => (
-    <View style={styles.achievementItem}>
+    <View style={[styles.achievementItem, { backgroundColor: isDarkMode ? '#1E1E1E' : '#FFFFFF' }]}>
       <LinearGradient
         colors={[item.color1, item.color2]}
         style={[
@@ -377,12 +380,12 @@ const LeaderboardScreen = () => {
       </LinearGradient>
       
       <View style={styles.achievementInfo}>
-        <Text style={styles.achievementTitle}>{item.title}</Text>
-        <Text style={styles.achievementDescription}>{item.description}</Text>
+        <Text style={[styles.achievementTitle, { color: theme.colors.text }]} numberOfLines={1} ellipsizeMode="tail">{item.title}</Text>
+        <Text style={[styles.achievementDescription, { color: theme.colors.textSecondary }]} numberOfLines={2} ellipsizeMode="tail">{item.description}</Text>
         
         {!item.completed && (
           <View style={styles.achievementProgress}>
-            <View style={styles.achievementProgressBar}>
+            <View style={[styles.achievementProgressBar, { backgroundColor: isDarkMode ? '#333333' : '#EEEEEE' }]}>
               <View 
                 style={[
                   styles.achievementProgressFill,
@@ -391,7 +394,7 @@ const LeaderboardScreen = () => {
                 ]} 
               />
             </View>
-            <Text style={styles.achievementProgressText}>{item.progress}%</Text>
+            <Text style={[styles.achievementProgressText, { color: theme.colors.textSecondary }]}>{item.progress}%</Text>
           </View>
         )}
       </View>
@@ -416,7 +419,7 @@ const LeaderboardScreen = () => {
           <View style={styles.summaryUserInfo}>
             <Image source={currentUser.avatar} style={styles.summaryAvatar} />
             <View>
-              <Text style={styles.summaryUserName}>{currentUser.name}</Text>
+              <Text style={styles.summaryUserName} numberOfLines={1} ellipsizeMode="tail">{currentUser.name}</Text>
               <View style={styles.summaryRank}>
                 <Text style={styles.summaryRankText}>Rank #{currentUser.rank}</Text>
                 <View style={styles.summaryRankChange}>
@@ -461,25 +464,26 @@ const LeaderboardScreen = () => {
   );
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.screenTitle}>Leaderboard</Text>
-        <TouchableOpacity style={styles.filterButton}>
-          <Icon name="filter-variant" size={24} color="#6200EE" />
+        <Text style={[styles.screenTitle, { color: theme.colors.text }]}>Leaderboard</Text>
+        <TouchableOpacity style={[styles.filterButton, { backgroundColor: isDarkMode ? '#333333' : '#F0E6FF' }]}>
+          <Icon name="filter-variant" size={24} color={theme.colors.primary} />
         </TouchableOpacity>
       </View>
 
       {renderSummaryCard()}
 
-      <View style={styles.tabsContainer}>
+      <View style={[styles.tabsContainer, { borderBottomColor: isDarkMode ? '#333333' : '#EEEEEE' }]}>
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'ranking' && styles.activeTab]}
+          style={[styles.tab, activeTab === 'ranking' && [styles.activeTab, { borderBottomColor: theme.colors.primary }]]}
           onPress={() => setActiveTab('ranking')}
         >
           <Text
             style={[
               styles.tabText,
-              activeTab === 'ranking' && styles.activeTabText,
+              { color: isDarkMode ? '#9E9E9E' : '#9E9E9E' },
+              activeTab === 'ranking' && [styles.activeTabText, { color: theme.colors.primary }],
             ]}
           >
             Ranking
@@ -487,13 +491,14 @@ const LeaderboardScreen = () => {
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'stats' && styles.activeTab]}
+          style={[styles.tab, activeTab === 'stats' && [styles.activeTab, { borderBottomColor: theme.colors.primary }]]}
           onPress={() => setActiveTab('stats')}
         >
           <Text
             style={[
               styles.tabText,
-              activeTab === 'stats' && styles.activeTabText,
+              { color: isDarkMode ? '#9E9E9E' : '#9E9E9E' },
+              activeTab === 'stats' && [styles.activeTabText, { color: theme.colors.primary }],
             ]}
           >
             Game Stats
@@ -501,13 +506,14 @@ const LeaderboardScreen = () => {
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'achievements' && styles.activeTab]}
+          style={[styles.tab, activeTab === 'achievements' && [styles.activeTab, { borderBottomColor: theme.colors.primary }]]}
           onPress={() => setActiveTab('achievements')}
         >
           <Text
             style={[
               styles.tabText,
-              activeTab === 'achievements' && styles.activeTabText,
+              { color: isDarkMode ? '#9E9E9E' : '#9E9E9E' },
+              activeTab === 'achievements' && [styles.activeTabText, { color: theme.colors.primary }],
             ]}
           >
             Achievements
@@ -516,14 +522,15 @@ const LeaderboardScreen = () => {
       </View>
 
       {activeTab === 'ranking' && (
-        <View style={styles.timeFilterContainer}>
+        <View style={[styles.timeFilterContainer, { borderBottomColor: isDarkMode ? '#333333' : '#EEEEEE' }]}>
           <TouchableOpacity
-            style={[styles.timeFilter, timeFilter === 'week' && styles.activeTimeFilter]}
+            style={[styles.timeFilter, timeFilter === 'week' && [styles.activeTimeFilter, { backgroundColor: theme.colors.primary }]]}
             onPress={() => setTimeFilter('week')}
           >
             <Text
               style={[
                 styles.timeFilterText,
+                { color: theme.colors.textSecondary },
                 timeFilter === 'week' && styles.activeTimeFilterText,
               ]}
             >
@@ -532,12 +539,13 @@ const LeaderboardScreen = () => {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.timeFilter, timeFilter === 'month' && styles.activeTimeFilter]}
+            style={[styles.timeFilter, timeFilter === 'month' && [styles.activeTimeFilter, { backgroundColor: theme.colors.primary }]]}
             onPress={() => setTimeFilter('month')}
           >
             <Text
               style={[
                 styles.timeFilterText,
+                { color: theme.colors.textSecondary },
                 timeFilter === 'month' && styles.activeTimeFilterText,
               ]}
             >
@@ -546,12 +554,13 @@ const LeaderboardScreen = () => {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.timeFilter, timeFilter === 'all' && styles.activeTimeFilter]}
+            style={[styles.timeFilter, timeFilter === 'all' && [styles.activeTimeFilter, { backgroundColor: theme.colors.primary }]]}
             onPress={() => setTimeFilter('all')}
           >
             <Text
               style={[
                 styles.timeFilterText,
+                { color: theme.colors.textSecondary },
                 timeFilter === 'all' && styles.activeTimeFilterText,
               ]}
             >
@@ -597,7 +606,6 @@ const LeaderboardScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
   },
   header: {
     flexDirection: 'row',
@@ -609,13 +617,11 @@ const styles = StyleSheet.create({
   screenTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#333333',
   },
   filterButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#F0E6FF',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -657,6 +663,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#FFFFFF',
     marginBottom: 5,
+    maxWidth: 200,
   },
   summaryRank: {
     flexDirection: 'row',
@@ -700,9 +707,8 @@ const styles = StyleSheet.create({
   tabsContainer: {
     flexDirection: 'row',
     paddingHorizontal: 20,
-    marginBottom: 15,
+    marginBottom: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#EEEEEE',
   },
   tab: {
     paddingVertical: 10,
@@ -711,38 +717,39 @@ const styles = StyleSheet.create({
     borderBottomColor: 'transparent',
   },
   activeTab: {
-    borderBottomColor: '#6200EE',
+    borderBottomWidth: 2,
   },
   tabText: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#9E9E9E',
   },
   activeTabText: {
-    color: '#6200EE',
     fontWeight: 'bold',
   },
   timeFilterContainer: {
     flexDirection: 'row',
     paddingHorizontal: 20,
-    marginBottom: 15,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    marginBottom: 10,
   },
   timeFilter: {
+    paddingHorizontal: 15,
     paddingVertical: 8,
-    paddingHorizontal: 12,
     borderRadius: 20,
     marginRight: 10,
-    backgroundColor: '#EEEEEE',
   },
   activeTimeFilter: {
-    backgroundColor: '#F0E6FF',
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 20,
   },
   timeFilterText: {
     fontSize: 12,
-    color: '#666666',
+    fontWeight: '500',
   },
   activeTimeFilterText: {
-    color: '#6200EE',
+    color: '#FFFFFF',
     fontWeight: 'bold',
   },
   listContainer: {
@@ -752,32 +759,26 @@ const styles = StyleSheet.create({
   rankItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 12,
+    padding: 15,
+    borderRadius: 10,
     marginBottom: 10,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 1,
     },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.1,
     shadowRadius: 3,
-    elevation: 1,
+    elevation: 2,
   },
   currentUserRankItem: {
-    backgroundColor: '#F0E6FF',
-    borderWidth: 1,
-    borderColor: '#6200EE',
+    borderWidth: 2,
+    borderColor: 'transparent',
   },
   rankPosition: {
     width: 30,
     alignItems: 'center',
-  },
-  rankPositionText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#666666',
+    marginRight: 10,
   },
   topRankBadge: {
     width: 24,
@@ -787,50 +788,50 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   topRankText: {
-    fontSize: 12,
-    fontWeight: 'bold',
     color: '#FFFFFF',
+    fontWeight: 'bold',
+    fontSize: 12,
+  },
+  rankPositionText: {
+    fontWeight: 'bold',
+    fontSize: 16,
   },
   userAvatar: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    marginRight: 12,
+    marginRight: 15,
   },
   userInfo: {
     flex: 1,
   },
   userName: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#333333',
-    marginBottom: 2,
+    fontWeight: 'bold',
+    fontSize: 16,
+    marginBottom: 3,
   },
   currentUserText: {
-    color: '#6200EE',
     fontWeight: 'bold',
   },
   userScore: {
-    fontSize: 12,
-    color: '#666666',
+    fontSize: 13,
   },
   rankChange: {
-    width: 24,
+    width: 30,
     alignItems: 'center',
   },
   gameStatItem: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    borderRadius: 10,
+    overflow: 'hidden',
     marginBottom: 15,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 1,
+      height: 2,
     },
     shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
-    overflow: 'hidden',
+    shadowRadius: 4,
+    elevation: 3,
   },
   gameStatHeader: {
     flexDirection: 'row',
@@ -838,10 +839,11 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   gameStatName: {
-    fontSize: 16,
-    fontWeight: 'bold',
     color: '#FFFFFF',
+    fontWeight: 'bold',
+    fontSize: 16,
     marginLeft: 10,
+    flex: 1,
   },
   gameStatContent: {
     padding: 15,
@@ -853,12 +855,10 @@ const styles = StyleSheet.create({
   },
   gameStatLabel: {
     fontSize: 14,
-    color: '#666666',
   },
   gameStatValue: {
     fontSize: 14,
     fontWeight: 'bold',
-    color: '#333333',
   },
   gameStatProgressContainer: {
     marginTop: 5,
@@ -869,18 +869,16 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   gameStatProgressText: {
-    fontSize: 12,
-    color: '#666666',
+    fontSize: 14,
   },
   gameStatProgressPercent: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: 'bold',
-    color: '#333333',
   },
   gameStatProgressBar: {
     height: 6,
-    backgroundColor: '#EEEEEE',
     borderRadius: 3,
+    overflow: 'hidden',
   },
   gameStatProgressFill: {
     height: '100%',
@@ -889,10 +887,9 @@ const styles = StyleSheet.create({
   achievementItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
     padding: 15,
-    marginBottom: 15,
+    borderRadius: 10,
+    marginBottom: 10,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -903,9 +900,9 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   achievementIcon: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 15,
@@ -917,33 +914,29 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   achievementTitle: {
-    fontSize: 16,
     fontWeight: 'bold',
-    color: '#333333',
-    marginBottom: 5,
+    fontSize: 16,
+    marginBottom: 3,
   },
   achievementDescription: {
-    fontSize: 12,
-    color: '#666666',
-    marginBottom: 10,
+    fontSize: 13,
+    marginBottom: 8,
   },
   achievementProgress: {
     width: '100%',
   },
   achievementProgressBar: {
     height: 6,
-    backgroundColor: '#EEEEEE',
     borderRadius: 3,
     marginBottom: 5,
+    overflow: 'hidden',
   },
   achievementProgressFill: {
     height: '100%',
     borderRadius: 3,
   },
   achievementProgressText: {
-    fontSize: 10,
-    color: '#666666',
-    textAlign: 'right',
+    fontSize: 12,
   },
   achievementCompleted: {
     marginLeft: 10,

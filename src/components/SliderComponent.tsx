@@ -255,6 +255,7 @@ const styles = StyleSheet.create({
     fontSize: fontScale(24),
     fontWeight: 'bold',
     color: '#FFFFFF',
+    fontFamily: 'Poppins-Bold', 
   
    
   },

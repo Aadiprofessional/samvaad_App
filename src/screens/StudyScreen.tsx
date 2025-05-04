@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import LinearGradient from 'react-native-linear-gradient';
 import { StudyScreenProps } from '../types/navigation';
+import { useTheme } from '../context/ThemeContext';
 
 type TabsType = 'courses' | 'tests' | 'certificates';
 
@@ -190,6 +191,7 @@ const certificates: CertificateType[] = [
 const StudyScreen = ({ navigation }: StudyScreenProps) => {
   const { width } = useWindowDimensions();
   const [activeTab, setActiveTab] = useState<TabsType>('courses');
+  const { theme, isDarkMode } = useTheme();
 
   const renderCourseItem = ({ item }: { item: CourseType }) => (
     <TouchableOpacity
@@ -206,7 +208,7 @@ const StudyScreen = ({ navigation }: StudyScreenProps) => {
         <View style={styles.courseCardContent}>
           <View>
             <Text style={styles.courseCardLevel}>{item.level.toUpperCase()}</Text>
-            <Text style={styles.courseCardTitle}>{item.title}</Text>
+            <Text style={styles.courseCardTitle} numberOfLines={2} ellipsizeMode="tail">{item.title}</Text>
             <View style={styles.courseCardDetails}>
               <View style={styles.courseCardDetail}>
                 <Icon name="book-open-variant" size={14} color="#FFFFFF" />
@@ -242,7 +244,7 @@ const StudyScreen = ({ navigation }: StudyScreenProps) => {
         end={{ x: 1, y: 1 }}
       >
         <View style={styles.testCardHeader}>
-          <Text style={styles.testCardTitle}>{item.title}</Text>
+          <Text style={styles.testCardTitle} numberOfLines={2} ellipsizeMode="tail">{item.title}</Text>
           <View style={[styles.testCardBadge, { backgroundColor: item.completed ? '#4CAF50' : '#FF9800' }]}>
             <Text style={styles.testCardBadgeText}>
               {item.completed ? 'Completed' : 'Available'}
@@ -281,7 +283,7 @@ const StudyScreen = ({ navigation }: StudyScreenProps) => {
       >
         <View style={styles.certificateCardContent}>
           <Icon name="certificate" size={30} color="#FFFFFF" style={styles.certificateIcon} />
-          <Text style={styles.certificateTitle}>{item.title}</Text>
+          <Text style={styles.certificateTitle} numberOfLines={2} ellipsizeMode="tail">{item.title}</Text>
           <Text style={styles.certificateDate}>
             {item.progress === 100 ? `Issued: ${item.issueDate}` : 'In Progress'}
           </Text>
@@ -316,11 +318,11 @@ const StudyScreen = ({ navigation }: StudyScreenProps) => {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.screenTitle}>Study</Text>
-        <TouchableOpacity style={styles.searchButton}>
-          <Icon name="magnify" size={24} color="#6200EE" />
+        <Text style={[styles.screenTitle, { color: theme.colors.text }]}>Study</Text>
+        <TouchableOpacity style={[styles.searchButton, { backgroundColor: isDarkMode ? '#333333' : '#F0E6FF' }]}>
+          <Icon name="magnify" size={24} color={theme.colors.primary} />
         </TouchableOpacity>
       </View>
 
@@ -335,30 +337,31 @@ const StudyScreen = ({ navigation }: StudyScreenProps) => {
             style={styles.featuredGradient}
           >
             <View style={styles.featuredContent}>
-              <View style={styles.featuredBadge}>
+              <View style={[styles.featuredBadge, { backgroundColor: theme.colors.primary }]}>
                 <Text style={styles.featuredBadgeText}>NEW COURSE</Text>
               </View>
-              <Text style={styles.featuredTitle}>Master Sign Language in 12 Weeks</Text>
+              <Text style={styles.featuredTitle} numberOfLines={2} ellipsizeMode="tail">Master Sign Language in 12 Weeks</Text>
               <Text style={styles.featuredDescription}>
                 A comprehensive course for all skill levels
               </Text>
               <TouchableOpacity style={styles.featuredButton}>
-                <Text style={styles.featuredButtonText}>Enroll Now</Text>
+                <Text style={[styles.featuredButtonText, { color: theme.colors.primary }]}>Enroll Now</Text>
               </TouchableOpacity>
             </View>
           </LinearGradient>
         </ImageBackground>
       </View>
 
-      <View style={styles.tabsContainer}>
+      <View style={[styles.tabsContainer, { borderBottomColor: isDarkMode ? '#333333' : '#EEEEEE' }]}>
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'courses' && styles.activeTab]}
+          style={[styles.tab, activeTab === 'courses' && [styles.activeTab, { borderBottomColor: theme.colors.primary }]]}
           onPress={() => setActiveTab('courses')}
         >
           <Text
             style={[
               styles.tabText,
-              activeTab === 'courses' && styles.activeTabText,
+              { color: isDarkMode ? '#9E9E9E' : '#9E9E9E' },
+              activeTab === 'courses' && [styles.activeTabText, { color: theme.colors.primary }],
             ]}
           >
             Courses
@@ -366,13 +369,14 @@ const StudyScreen = ({ navigation }: StudyScreenProps) => {
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'tests' && styles.activeTab]}
+          style={[styles.tab, activeTab === 'tests' && [styles.activeTab, { borderBottomColor: theme.colors.primary }]]}
           onPress={() => setActiveTab('tests')}
         >
           <Text
             style={[
               styles.tabText,
-              activeTab === 'tests' && styles.activeTabText,
+              { color: isDarkMode ? '#9E9E9E' : '#9E9E9E' },
+              activeTab === 'tests' && [styles.activeTabText, { color: theme.colors.primary }],
             ]}
           >
             Tests
@@ -380,13 +384,14 @@ const StudyScreen = ({ navigation }: StudyScreenProps) => {
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'certificates' && styles.activeTab]}
+          style={[styles.tab, activeTab === 'certificates' && [styles.activeTab, { borderBottomColor: theme.colors.primary }]]}
           onPress={() => setActiveTab('certificates')}
         >
           <Text
             style={[
               styles.tabText,
-              activeTab === 'certificates' && styles.activeTabText,
+              { color: isDarkMode ? '#9E9E9E' : '#9E9E9E' },
+              activeTab === 'certificates' && [styles.activeTabText, { color: theme.colors.primary }],
             ]}
           >
             Certificates
@@ -430,7 +435,6 @@ const StudyScreen = ({ navigation }: StudyScreenProps) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
   },
   header: {
     flexDirection: 'row',
@@ -442,13 +446,11 @@ const styles = StyleSheet.create({
   screenTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#333',
   },
   searchButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#F0E6FF',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -470,7 +472,6 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   featuredBadge: {
-    backgroundColor: '#6200EE',
     alignSelf: 'flex-start',
     paddingHorizontal: 10,
     paddingVertical: 5,
@@ -487,6 +488,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#FFFFFF',
     marginBottom: 5,
+    maxWidth: '90%',
   },
   featuredDescription: {
     fontSize: 14,
@@ -501,7 +503,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   featuredButtonText: {
-    color: '#6200EE',
     fontWeight: 'bold',
     fontSize: 14,
   },
@@ -510,7 +511,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     marginBottom: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#EEEEEE',
   },
   tab: {
     paddingVertical: 10,
@@ -519,15 +519,13 @@ const styles = StyleSheet.create({
     borderBottomColor: 'transparent',
   },
   activeTab: {
-    borderBottomColor: '#6200EE',
+    borderBottomWidth: 2,
   },
   tabText: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#9E9E9E',
   },
   activeTabText: {
-    color: '#6200EE',
     fontWeight: 'bold',
   },
   listContainer: {
@@ -564,6 +562,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#FFFFFF',
     marginBottom: 10,
+    maxWidth: '90%',
   },
   courseCardDetails: {
     flexDirection: 'row',
@@ -625,6 +624,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#FFFFFF',
     width: '70%',
+    maxWidth: '70%',
   },
   testCardBadge: {
     paddingHorizontal: 10,
@@ -679,6 +679,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     textAlign: 'center',
     marginBottom: 5,
+    maxWidth: '95%',
   },
   certificateDate: {
     fontSize: 14,
@@ -702,7 +703,7 @@ const styles = StyleSheet.create({
   certificateProgressText: {
     fontSize: 12,
     color: '#FFFFFF',
-    textAlign: 'right',
+    textAlign: 'center',
   },
 });
 
