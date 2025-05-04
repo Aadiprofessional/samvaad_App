@@ -28,7 +28,7 @@ const TranslatorScreen = () => {
   const { theme, isDarkMode } = useTheme();
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'translate' | 'history' | 'learn'>('translate');
-  const [cameraActive, setCameraActive] = useState(false);
+  const [cameraActive, setCameraActive] = useState(true);
   const [translatedText, setTranslatedText] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const [selectedImage, setSelectedImage] = useState<any>(null);
@@ -39,6 +39,7 @@ const TranslatorScreen = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const MAX_RETRIES = 2;
+  const [cameraPaused, setCameraPaused] = useState(false);
   
   // Camera reference
   const cameraRef = useRef<Camera>(null);
@@ -68,6 +69,23 @@ const TranslatorScreen = () => {
       setCameraPermission(status);
     })();
   }, []);
+
+  // Auto-pause camera after inactivity (e.g., 30 seconds)
+  useEffect(() => {
+    let inactivityTimer: NodeJS.Timeout;
+    
+    if (cameraActive && !cameraPaused) {
+      inactivityTimer = setTimeout(() => {
+        setCameraPaused(true);
+      }, 30000); // 30 seconds of inactivity
+    }
+    
+    return () => {
+      if (inactivityTimer) {
+        clearTimeout(inactivityTimer);
+      }
+    };
+  }, [cameraActive, cameraPaused]);
 
   // Load translation history when component mounts or when activeTab changes to history
   useEffect(() => {
@@ -206,6 +224,11 @@ const TranslatorScreen = () => {
     }
   }, [cameraPermission, cameraRef, device]);
 
+  // Resume camera if paused
+  const handleResumeCamera = () => {
+    setCameraPaused(false);
+  };
+
   // Launch image picker
   const handleImageGallery = async () => {
     // For Android, check storage permission
@@ -285,7 +308,6 @@ const TranslatorScreen = () => {
       
       // Step 1: Upload the image to Supabase storage
       console.log('Uploading image to storage...');
-      setUploadProgress(30);
       
       // Ensure we have a valid image file
       if (!imageFile || !imageFile.uri) {
@@ -302,7 +324,6 @@ const TranslatorScreen = () => {
       }
       
       console.log('Image successfully uploaded, URL:', publicUrl);
-      setUploadProgress(60);
       
       // Step 2: Use the AI to provide interpretation
       console.log('Getting interpretation from AI...');
@@ -338,8 +359,6 @@ const TranslatorScreen = () => {
         setErrorMessage('We could not analyze this image at the moment.');
         setTranslatedText('');
       }
-      
-      setUploadProgress(100);
     } catch (error) {
       console.error('Error processing image:', error);
       setErrorMessage('There was a problem processing your image. Please try again.');
@@ -360,6 +379,8 @@ const TranslatorScreen = () => {
     }
     
     setCameraActive(!cameraActive);
+    setCameraPaused(false);
+    
     if (cameraActive) {
       // Reset when turning camera off
       setSelectedImage(null);
@@ -462,17 +483,32 @@ const TranslatorScreen = () => {
   const renderTranslateView = () => (
     <View style={styles.content}>
       {activeTab === 'translate' && (
-    <View style={styles.cameraContainer}>
-      {cameraActive ? (
-        <View style={styles.activeCamera}>
+        <View style={styles.cameraContainer}>
+          {!selectedImage ? (
+            // Camera view
+            <View style={styles.activeCamera}>
               {device != null && cameraPermission ? (
-                <Camera
-                  ref={cameraRef}
-                  style={styles.cameraView}
-                  device={device}
-                  isActive={cameraActive}
-                  photo={true}
-                />
+                <>
+                  {cameraPaused ? (
+                    <TouchableOpacity
+                      style={[styles.pausedCameraOverlay, { backgroundColor: isDarkMode ? '#1E1E1E' : '#F6F6F6' }]}
+                      onPress={handleResumeCamera}
+                    >
+                      <Icon name="play" size={60} color={theme.primary} />
+                      <Text style={[styles.pausedCameraText, { color: theme.text }]}>
+                        Camera paused. Tap to resume.
+                      </Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <Camera
+                      ref={cameraRef}
+                      style={styles.cameraView}
+                      device={device}
+                      isActive={cameraActive && !cameraPaused}
+                      photo={true}
+                    />
+                  )}
+                </>
               ) : (
                 <View style={styles.cameraPlaceholder}>
                   <Icon name="camera-off" size={40} color={theme.textSecondary} />
@@ -481,52 +517,76 @@ const TranslatorScreen = () => {
                   </Text>
                 </View>
               )}
-              
+                
               {isLoading && (
-                <View 
-                  style={[
-                    styles.loadingContainer, 
-                    { backgroundColor: isDarkMode ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.7)' }
-                  ]}
-                >
+                <View style={[styles.loadingOverlay, { backgroundColor: isDarkMode ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.7)' }]}>
                   <ActivityIndicator size="large" color={theme.primary} />
-                  <Text style={[styles.loadingText, { color: theme.text }]}>
-                    {uploadProgress < 100 ? `Uploading... ${uploadProgress}%` : 'Analyzing sign...'}
-                  </Text>
+                  <Text style={[styles.loadingText, { color: theme.text }]}>Processing image...</Text>
                 </View>
               )}
-              
+                
               {translatedText !== '' && !isLoading && !errorMessage && (
-          <View style={styles.translationOverlay}>
-            <Text style={styles.translatedText}>{translatedText}</Text>
-          </View>
+                <View style={styles.translationOverlay}>
+                  <Text style={styles.translatedText}>{translatedText}</Text>
+                </View>
               )}
-              
+                
               {errorMessage && !isLoading && (
                 <View style={[styles.translationOverlay, { backgroundColor: 'rgba(200, 0, 0, 0.8)' }]}>
                   <Text style={styles.translatedText}>{errorMessage}</Text>
                 </View>
               )}
-        </View>
-      ) : (
-            <TouchableOpacity 
-              style={[
-                styles.placeholderCamera, 
-                { 
-                  backgroundColor: isDarkMode ? '#1E1E1E' : '#F6F6F6',
-                  borderColor: theme.border 
-                }
-              ]}
-              onPress={handleCameraToggle}
-            >
-              <Icon name="camera" size={60} color={theme.textSecondary} />
-              <Text style={[styles.placeholderText, { color: theme.text }]}>
-                Tap to activate camera
-              </Text>
-            </TouchableOpacity>
+            </View>
+          ) : (
+            // Selected image view
+            <>
+              <Image
+                source={{ uri: selectedImage.uri }}
+                style={[
+                  styles.inactiveCamera,
+                  { borderWidth: 1, borderColor: theme.border }
+                ]}
+                resizeMode="cover"
+              />
+              
+              {isLoading && (
+                <View style={[styles.loadingOverlay, { backgroundColor: isDarkMode ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.7)' }]}>
+                  <ActivityIndicator size="large" color={theme.primary} />
+                  <Text style={[styles.loadingText, { color: theme.text }]}>Processing image...</Text>
+                </View>
+              )}
+              
+              {translatedText !== '' && !isLoading && !errorMessage && (
+                <View style={[styles.inactiveTranslationOverlay]}>
+                  <Text style={styles.translatedText}>{translatedText}</Text>
+                </View>
+              )}
+              
+              {errorMessage && !isLoading && (
+                <View style={[styles.inactiveTranslationOverlay, { backgroundColor: 'rgba(200, 0, 0, 0.8)' }]}>
+                  <Text style={styles.translatedText}>{errorMessage}</Text>
+                </View>
+              )}
+              
+              {/* Retry button on the image */}
+              {!isLoading && (
+                <TouchableOpacity 
+                  style={styles.retryButton}
+                  onPress={() => {
+                    setSelectedImage(null);
+                    setTranslatedText('');
+                    setErrorMessage(null);
+                  }}
+                >
+                  <Icon name="refresh" size={24} color="#FFFFFF" />
+                  <Text style={styles.retryButtonText}>Retry</Text>
+                </TouchableOpacity>
+              )}
+            </>
           )}
           
-          {cameraActive && (
+          {/* Camera Controls */}
+          {!selectedImage ? (
             <View style={styles.cameraControls}>
               <TouchableOpacity
                 style={[styles.cameraButton, { backgroundColor: theme.cardBackground }]}
@@ -543,7 +603,7 @@ const TranslatorScreen = () => {
                   capturedPhoto ? styles.cameraTriggerButtonActive : null
                 ]}
                 onPress={handleTakePhoto}
-                disabled={isLoading || !device}
+                disabled={isLoading || !device || cameraPaused}
               >
                 <Icon name="camera" size={30} color="#FFFFFF" />
               </TouchableOpacity>
@@ -551,130 +611,52 @@ const TranslatorScreen = () => {
               <TouchableOpacity
                 style={[styles.cameraButton, { backgroundColor: theme.cardBackground }]}
                 onPress={toggleCameraFacing}
-                disabled={isLoading}
+                disabled={isLoading || cameraPaused}
               >
                 <Icon 
                   name="camera-switch" 
                   size={24} 
-                  color={isLoading ? theme.textSecondary : theme.text} 
+                  color={isLoading || cameraPaused ? theme.textSecondary : theme.text} 
                 />
               </TouchableOpacity>
             </View>
-          )}
-          
-          {!cameraActive && selectedImage && (
-            <>
-              <Image
-                source={{ uri: selectedImage.uri }}
+          ) : (
+            <View style={styles.cameraControls}>
+              <TouchableOpacity 
+                style={[styles.cameraButton, { backgroundColor: theme.cardBackground }]}
+                onPress={handleImageGallery}
+              >
+                <Icon name="image" size={24} color={theme.text} />
+              </TouchableOpacity>
+              
+              <TouchableOpacity
                 style={[
-                  styles.inactiveCamera,
-                  { borderWidth: 1, borderColor: theme.border }
+                  styles.cameraTriggerButton, 
+                  { backgroundColor: theme.secondary },
                 ]}
-                resizeMode="cover"
-              />
+                onPress={() => {
+                  setSelectedImage(null);
+                  setTranslatedText('');
+                  setErrorMessage(null);
+                }}
+              >
+                <Icon name="camera" size={30} color="#FFFFFF" />
+              </TouchableOpacity>
               
-              {isLoading && (
-                <View 
-                  style={[
-                    styles.loadingContainer, 
-                    { 
-                      backgroundColor: isDarkMode ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.7)',
-                      top: 20,
-                      left: 20,
-                      right: 20,
-                      bottom: 20,
-                    }
-                  ]}
-                >
-                  <ActivityIndicator size="large" color={theme.primary} />
-                  <Text style={[styles.loadingText, { color: theme.text }]}>
-                    {uploadProgress < 100 ? `Uploading... ${uploadProgress}%` : 'Analyzing sign...'}
-          </Text>
-        </View>
-      )}
-              
-              {translatedText !== '' && !isLoading && !errorMessage && (
-                <View style={[styles.inactiveTranslationOverlay]}>
-                  <Text style={styles.translatedText}>{translatedText}</Text>
-                </View>
-              )}
-              
-              {errorMessage && !isLoading && (
-                <View style={[styles.inactiveTranslationOverlay, { backgroundColor: 'rgba(200, 0, 0, 0.8)' }]}>
-                  <Text style={styles.translatedText}>{errorMessage}</Text>
-                </View>
-              )}
-
-      <View style={styles.cameraControls}>
-        <TouchableOpacity 
-                  style={[styles.cameraButton, { backgroundColor: theme.cardBackground }]}
-                  onPress={handleImageGallery}
-        >
-                  <Icon name="image" size={24} color={theme.text} />
-        </TouchableOpacity>
-                
-        <TouchableOpacity
-          style={[
-            styles.cameraTriggerButton, 
-                    { backgroundColor: theme.secondary },
-          ]}
-          onPress={handleCameraToggle}
-        >
-                  <Icon name="camera" size={30} color="#FFFFFF" />
-        </TouchableOpacity>
-                
-                <TouchableOpacity
-                  style={[styles.cameraButton, { backgroundColor: theme.cardBackground }]}
-                  onPress={() => {
-                    setSelectedImage(null);
-                    setTranslatedText('');
-                    setErrorMessage(null);
-                  }}
-                >
-                  <Icon name="refresh" size={24} color={theme.text} />
-        </TouchableOpacity>
-      </View>
-            </>
-          )}
-
-          {!cameraActive && !selectedImage && (
-            <View 
-              style={[
-                styles.inactiveCamera, 
-                { 
-                  backgroundColor: isDarkMode ? '#1E1E1E' : '#F6F6F6',
-                  borderWidth: 1, 
-                  borderColor: theme.border,
-                  justifyContent: 'center',
-                  alignItems: 'center'
-                }
-              ]}
-            >
-              <Icon name="image-off" size={60} color={theme.textSecondary} />
-              <Text style={[styles.inactiveCameraText, { color: theme.text }]}>
-                Use the camera or select an image to translate sign language
-              </Text>
-              
-              <View style={[styles.cameraControls, { marginTop: 20 }]}>
-                <TouchableOpacity
-                  style={[styles.cameraButton, { backgroundColor: theme.cardBackground }]}
-                  onPress={handleImageGallery}
-                >
-                  <Icon name="image" size={24} color={theme.text} />
-                </TouchableOpacity>
-                
-                <TouchableOpacity
-                  style={[
-                    styles.cameraTriggerButton,
-                    { backgroundColor: theme.primary },
-                  ]}
-                  onPress={handleCameraToggle}
-                >
-                  <Icon name="camera" size={30} color="#FFFFFF" />
-                </TouchableOpacity>
-                
-                <View style={styles.cameraButton} />
-              </View>
+              <TouchableOpacity
+                style={[styles.cameraButton, { backgroundColor: theme.cardBackground }]}
+                onPress={() => {
+                  // Clear current results but keep the image
+                  setTranslatedText('');
+                  setErrorMessage(null);
+                  // Re-process the same image (useful for retrying analysis)
+                  if (selectedImage) {
+                    processImage(selectedImage);
+                  }
+                }}
+              >
+                <Icon name="refresh" size={24} color={theme.text} />
+              </TouchableOpacity>
             </View>
           )}
         </View>
@@ -769,16 +751,11 @@ const TranslatorScreen = () => {
         ))}
       </View>
 
-      <TouchableOpacity style={styles.allSignsButton}>
-        <LinearGradient
-          colors={['#6a11cb', '#2575fc']}
-          style={styles.allSignsGradient}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-        >
-          <Text style={styles.allSignsText} numberOfLines={1} ellipsizeMode="tail">View All Signs</Text>
-          <Icon name="chevron-right" size={20} color="#FFFFFF" />
-        </LinearGradient>
+      <TouchableOpacity 
+        style={[styles.allSignsButton, { backgroundColor: theme.colors.primary }]}
+      >
+        <Text style={styles.allSignsText}>View All Signs</Text>
+        <Icon name="chevron-right" size={20} color="#FFFFFF" />
       </TouchableOpacity>
     </ScrollView>
   );
@@ -873,6 +850,16 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
+  pausedCameraOverlay: {
+    flex: 1,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  pausedCameraText: {
+    marginTop: 10,
+    fontSize: 16,
+  },
   placeholderCamera: {
     flex: 1,
     borderRadius: 20,
@@ -933,12 +920,12 @@ const styles = StyleSheet.create({
   cameraTriggerButtonActive: {
     borderWidth: 3,
   },
-  loadingContainer: {
+  loadingOverlay: {
     position: 'absolute',
-    top: 20,
-    left: 20,
-    right: 20,
-    bottom: 80,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 10,
@@ -1067,15 +1054,12 @@ const styles = StyleSheet.create({
   },
   allSignsButton: {
     borderRadius: 25,
-    overflow: 'hidden',
-    marginBottom: 20,
-  },
-  allSignsGradient: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 20,
+    marginBottom: 20,
   },
   allSignsText: {
     color: '#FFFFFF',
@@ -1102,6 +1086,22 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.7)',
     padding: 15,
     borderRadius: 10,
+  },
+  retryButton: {
+    position: 'absolute',
+    top: 15,
+    right: 15,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    borderRadius: 20,
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  retryButtonText: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+    marginLeft: 5,
   },
 });
 

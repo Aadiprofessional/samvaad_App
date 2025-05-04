@@ -281,7 +281,7 @@ export const analyzeSignLanguageImage = async (imageUrl: string): Promise<string
             content: [
               {
                 type: 'text',
-                text: 'According to American Sign Language, what word or letter is this?'
+                text: 'According to American Sign Language, what word or letter is this? only respond with the word or letter. in 5 words or less.'
               },
               {
                 type: 'image_url',
