@@ -52,14 +52,14 @@ const TranslatorScreen = () => {
   const [translationHistory, setTranslationHistory] = useState<Translation[]>([]);
 
   const [learnSigns, setLearnSigns] = useState([
-    { id: 1, sign: 'A', image: require('../assets/images/placeholder-avatar.png') },
-    { id: 2, sign: 'B', image: require('../assets/images/placeholder-avatar.png') },
-    { id: 3, sign: 'C', image: require('../assets/images/placeholder-avatar.png') },
-    { id: 4, sign: 'D', image: require('../assets/images/placeholder-avatar.png') },
-    { id: 5, sign: 'E', image: require('../assets/images/placeholder-avatar.png') },
-    { id: 6, sign: 'F', image: require('../assets/images/placeholder-avatar.png') },
-    { id: 7, sign: 'G', image: require('../assets/images/placeholder-avatar.png') },
-    { id: 8, sign: 'H', image: require('../assets/images/placeholder-avatar.png') },
+    { id: 1, sign: 'A', image: require('../assets/Handsign/A.png') },
+    { id: 2, sign: 'B', image: require('../assets/Handsign/B.png') },
+    { id: 3, sign: 'C', image: require('../assets/Handsign/C.png') },
+    { id: 4, sign: 'D', image: require('../assets/Handsign/D.png') },
+    { id: 5, sign: 'E', image: require('../assets/Handsign/E.png') },
+    { id: 6, sign: 'F', image: require('../assets/Handsign/F.png') },
+    { id: 7, sign: 'G', image: require('../assets/Handsign/G.png') },
+    { id: 8, sign: 'H', image: require('../assets/Handsign/H.png') },
   ]);
 
   // Check camera permissions when component mounts

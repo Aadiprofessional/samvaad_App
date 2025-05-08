@@ -25,6 +25,7 @@ import ThemeToggle from '../components/ThemeToggle';
 import SliderComponent from '../components/SliderComponent';
 import GameCard from '../components/GameCard';
 import { NavigationProp, ParamListBase, useIsFocused } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = width / 2 - scale(32); // 2 cards per row with more spacing
@@ -82,6 +83,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const [userData, setUserData] = useState<UserData | null>(null);
   const isFocused = useIsFocused();
   const justFocused = useRef(false);
+  const { t } = useTranslation();
   
   // Animated header values
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -156,30 +158,30 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const featuredItems: SliderItem[] = [
     {
       id: 1,
-      title: 'Learn Sign Language Basics',
-      description: 'Get started with basic sign language training through interactive lessons.',
-      tag: 'Beginner',
-      buttonText: 'Start Learning',
+      title: t('home.learnSignLanguageBasics'),
+      description: t('home.learnDescription'),
+      tag: t('home.beginner'),
+      buttonText: t('home.startLearning'),
       icon: 'handshake',
       gradient: ['#36D1DC', '#5B86E5'], // Light blue gradient
       type: 'learn'
     },
     {
       id: 2,
-      title: 'Play Sign Language Games',
-      description: 'Enhance your skills with fun memory games and challenges.',
-      tag: 'Fun',
-      buttonText: 'Play Now',
+      title: t('home.playSignLanguageGames'),
+      description: t('home.gamesDescription'),
+      tag: t('home.fun'),
+      buttonText: t('home.playNow'),
       icon: 'gamepad-variant',
       gradient: ['#4776E6', '#8E54E9'], // Light purple gradient
       type: 'play'
     },
     {
       id: 3,
-      title: 'Translate Signs in Real-time',
-      description: 'Use your camera to translate sign language into text instantly.',
-      tag: 'Tool',
-      buttonText: 'Try it',
+      title: t('home.translateSignsRealtime'),
+      description: t('home.translationDescription'),
+      tag: t('home.tool'),
+      buttonText: t('home.tryIt'),
       icon: 'translate',
       gradient: ['#FF9966', '#FF5E62'], // Light orange-red gradient
       type: 'translate'
@@ -188,35 +190,35 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   
   // Categories
   const categories = [
-    { id: 'alphabet', name: 'Alphabet', icon: 'alphabetical' },
-    { id: 'numbers', name: 'Numbers', icon: 'numeric' },
-    { id: 'phrases', name: 'Phrases', icon: 'message-text' },
-    { id: 'conversations', name: 'Conversations', icon: 'account-group' },
-    { id: 'practice', name: 'Practice', icon: 'handshake' },
+    { id: 'alphabet', name: t('home.categories.alphabet'), icon: 'alphabetical' },
+    { id: 'numbers', name: t('home.categories.numbers'), icon: 'numeric' },
+    { id: 'phrases', name: t('home.categories.phrases'), icon: 'message-text' },
+    { id: 'conversations', name: t('home.categories.conversations'), icon: 'account-group' },
+    { id: 'practice', name: t('home.categories.practice'), icon: 'handshake' },
   ];
   
   // Update learning paths with lighter gradients
   const learningPaths = [
     {
       id: 1,
-      title: 'Basics of Sign Language',
-      description: 'Learn the fundamental concepts of sign language',
+      title: t('home.basicsOfSignLanguage'),
+      description: t('home.learnFundamentalConcepts'),
       progress: 65,
       lessons: 10,
       gradient: ['#36D1DC', '#5B86E5'], // Light blue gradient
     },
     {
       id: 2,
-      title: 'Everyday Conversations',
-      description: 'Practice common phrases for daily communication',
+      title: t('home.everydayConversations'),
+      description: t('home.practiceCommonPhrases'),
       progress: 30,
       lessons: 8,
       gradient: ['#FF9966', '#FF5E62'], // Light orange-red gradient
     },
     {
       id: 3,
-      title: 'Advanced Techniques',
-      description: 'Master complex sign language expressions',
+      title: t('home.advancedTechniques'),
+      description: t('home.masterComplexExpressions'),
       progress: 10,
       lessons: 12,
       gradient: ['#4776E6', '#8E54E9'], // Light purple gradient
@@ -227,38 +229,38 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const popularGames: Game[] = [
     {
       id: 1,
-      title: 'Memory Match',
-      description: 'Match signs with their meanings in this fun memory game',
+      title: t('games.memoryMatch'),
+      description: t('games.memoryMatchDescription'),
       image: require('../assets/images/placeholder-avatar.png'),
       gradient: ['#7F53AC', '#647DEE'], // Vibrant purple gradient
-      level: 'Beginner',
+      level: t('home.beginner'),
       navigateTo: 'MemoryMatchGame'
     },
     {
       id: 2,
-      title: 'Sign Quiz',
-      description: 'Test your knowledge with interactive quizzes',
+      title: t('games.signLanguageQuiz'),
+      description: t('games.signQuizDescription'),
       image: require('../assets/images/placeholder-avatar.png'),
       gradient: ['#FF9966', '#FF5E62'], // Bright orange-red gradient
-      level: 'Intermediate',
+      level: t('home.intermediate'),
       navigateTo: 'SignLanguageQuiz'
     },
     {
       id: 3,
-      title: 'Word Association',
-      description: 'Associate signs with words in this challenging game',
+      title: t('games.wordAssociation'),
+      description: t('games.wordAssociationDescription'),
       image: require('../assets/images/placeholder-avatar.png'),
       gradient: ['#C471ED', '#F64F59'], // Vibrant pink-purple gradient
-      level: 'Advanced',
+      level: t('home.advanced'),
       navigateTo: 'WordAssociationGame'
     },
     {
       id: 4,
-      title: 'Story Time',
-      description: 'Follow along with interactive sign language stories',
+      title: t('games.storyTime'),
+      description: t('games.storyTimeDescription'),
       image: require('../assets/images/placeholder-avatar.png'),
       gradient: ['#56CCF2', '#2F80ED'], // Bright blue gradient
-      level: 'All Levels',
+      level: t('home.allLevels'),
       navigateTo: 'StoryTimeGame'
     }
   ];
@@ -323,10 +325,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         >
           <View>
             <Text style={[styles.greeting, { color: theme.colors.textSecondary }]}>
-              Good Morning
+              {t('home.welcome')}
             </Text>
             <Text style={[styles.username, { color: theme.colors.text }]}>
-              {userData?.name || 'User'}
+              {userData?.name || t('common.user')}
             </Text>
           </View>
           <View style={styles.headerRight}>
@@ -387,11 +389,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         <View style={styles.sectionContainer}>
           <View style={styles.sectionHeader}>
             <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
-              Categories
+              {t('home.category')}
             </Text>
             <TouchableOpacity onPress={() => {}}>
               <Text style={[styles.seeAllText, { color: theme.colors.primary }]}>
-                See All
+                {t('common.seeAll')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -409,11 +411,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         <View style={styles.sectionContainer}>
           <View style={styles.sectionHeader}>
             <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
-              Continue Learning
+              {t('home.continueStudying')}
             </Text>
             <TouchableOpacity onPress={() => navigation.navigate('Study')}>
               <Text style={[styles.seeAllText, { color: theme.colors.primary }]}>
-                See All
+                {t('common.seeAll')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -430,11 +432,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         <View style={styles.sectionContainer}>
           <View style={styles.sectionHeader}>
             <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
-              Popular Games
+              {t('games.popular')}
             </Text>
             <TouchableOpacity onPress={() => navigation.navigate('Games')}>
               <Text style={[styles.seeAllText, { color: theme.colors.primary }]}>
-                Play All
+                {t('games.playAll')}
               </Text>
             </TouchableOpacity>
           </View>

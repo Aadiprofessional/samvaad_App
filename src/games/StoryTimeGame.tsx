@@ -52,7 +52,7 @@ const storyData: StoryType[] = [
       {
         id: 1,
         text: "Sofia was excited for her first day at sign language class. She had always been fascinated by how people could communicate with their hands. As she entered the classroom, she saw other students practicing different hand movements. The teacher welcomed everyone with a warm smile and a hand gesture.",
-        signImage: require('../assets/images/placeholder-avatar.png'),
+        signImage: require('../assets/Handsign/H.png'),
         choices: [
           { 
             text: "Sofia sat quietly in the back of the room.", 
@@ -74,7 +74,7 @@ const storyData: StoryType[] = [
       {
         id: 2,
         text: "Sofia waved hello to the teacher. The teacher showed everyone the proper way to sign 'Hello' and 'My name is...' Everyone practiced introducing themselves. Sofia loved how expressive sign language was.",
-        signImage: require('../assets/images/placeholder-avatar.png'),
+        signImage: require('../assets/Handsign/P.png'),
         choices: [
           { 
             text: "Sofia gave up because it was too difficult.", 
@@ -96,7 +96,7 @@ const storyData: StoryType[] = [
       {
         id: 3,
         text: "Sofia practiced the signs repeatedly. By the end of the class, she could confidently introduce herself in sign language. The teacher gave them homework to practice greeting signs with family and friends.",
-        signImage: require('../assets/images/placeholder-avatar.png'),
+        signImage: require('../assets/Handsign/F.png'),
         choices: [
           { 
             text: "Sofia forgot about the homework.", 
@@ -118,7 +118,7 @@ const storyData: StoryType[] = [
       {
         id: 4,
         text: "Sofia practiced with her family that evening. Her little brother thought it was a fun game and joined in. Their parents were impressed by how quickly Sofia was learning.",
-        signImage: require('../assets/images/placeholder-avatar.png'),
+        signImage: require('../assets/Handsign/P.png'),
         choices: [
           { 
             text: "Sofia felt discouraged and quit.", 
@@ -140,7 +140,7 @@ const storyData: StoryType[] = [
       {
         id: 5,
         text: "Sofia looked forward to the next class and continued practicing daily. Within weeks, she could have basic conversations in sign language. She made new friends in class who supported each other's learning journey.",
-        signImage: require('../assets/images/placeholder-avatar.png'),
+        signImage: require('../assets/Handsign/G.png'),
         choices: [
           { 
             text: "The End", 
@@ -173,7 +173,7 @@ const storyData: StoryType[] = [
       {
         id: 1,
         text: "Marco had been learning sign language for six months when he decided to volunteer at the local Deaf community center. He was nervous about his intermediate signing skills but wanted to immerse himself in the language. As he arrived at the center, he saw a group of people engaged in animated conversation through sign.",
-        signImage: require('../assets/images/placeholder-avatar.png'),
+        signImage: require('../assets/Handsign/D.png'),
         choices: [
           { 
             text: "Marco hesitated at the door, afraid to go in.", 
@@ -195,7 +195,7 @@ const storyData: StoryType[] = [
       {
         id: 2,
         text: "Marco approached the volunteer coordinator who greeted him warmly in sign language. The coordinator introduced Marco to a few regular visitors and explained his role as a volunteer. Marco would help with organizing events and practice his signing with community members.",
-        signImage: require('../assets/images/placeholder-avatar.png'),
+        signImage: require('../assets/Handsign/Q.png'),
         choices: [
           { 
             text: "Marco declined the responsibilities, feeling overwhelmed.", 
@@ -217,7 +217,7 @@ const storyData: StoryType[] = [
       {
         id: 3,
         text: "Marco accepted the role and asked questions in sign language. Though he made mistakes, people were patient and helpful. He was assigned to help with an upcoming community game night and partnered with Elena, a Deaf artist who frequently visited the center.",
-        signImage: require('../assets/images/placeholder-avatar.png'),
+        signImage: require('../assets/Handsign/B.png'),
         choices: [
           { 
             text: "Marco relied on written notes to communicate with Elena.", 
@@ -239,7 +239,7 @@ const storyData: StoryType[] = [
       {
         id: 4,
         text: "Marco tried his best to sign with Elena. When he didn't know a sign, he would fingerspell or ask Elena to teach him. By the end of the day, Marco had learned many new signs related to games, art, and community events.",
-        signImage: require('../assets/images/placeholder-avatar.png'),
+        signImage: require('../assets/Handsign/P.png'),
         choices: [
           { 
             text: "Marco was exhausted and decided volunteering was too difficult.", 
@@ -261,7 +261,7 @@ const storyData: StoryType[] = [
       {
         id: 5,
         text: "Marco thanked Elena and made plans to return next week. Over the following months, his signing improved dramatically through regular immersion. He made many friends at the center and eventually helped coordinate a bridge event between the Deaf community and local schools.",
-        signImage: require('../assets/images/placeholder-avatar.png'),
+        signImage: require('../assets/Handsign/C.png'),
         choices: [
           { 
             text: "The End", 
@@ -294,7 +294,7 @@ const storyData: StoryType[] = [
       {
         id: 1,
         text: "Dr. Leila was already fluent in sign language when she decided to specialize in medical signing. As an ER doctor, she frequently encountered Deaf patients who struggled with medical communication in emergency situations. She enrolled in an advanced medical sign language course taught by Dr. Chen, a Deaf medical professional.",
-        signImage: require('../assets/images/placeholder-avatar.png'),
+        signImage: require('../assets/Handsign/T.png'),
         choices: [
           { 
             text: "Dr. Leila found the course too specialized and dropped out.", 
@@ -316,7 +316,7 @@ const storyData: StoryType[] = [
       {
         id: 2,
         text: "Dr. Leila committed to the intensive training. Dr. Chen taught specialized signs for medical conditions, procedures, and emergency situations. The course also covered cultural aspects of medical care in the Deaf community and the importance of clear consent communication.",
-        signImage: require('../assets/images/placeholder-avatar.png'),
+        signImage: require('../assets/Handsign/A.png'),
         choices: [
           { 
             text: "Dr. Leila focused only on the vocabulary but ignored the cultural aspects.", 
@@ -338,7 +338,7 @@ const storyData: StoryType[] = [
       {
         id: 3,
         text: "Dr. Leila integrated both medical signing and cultural awareness in her practice. One night during her shift, a Deaf patient arrived at the ER with severe chest pain. There was no interpreter immediately available, but Dr. Leila was able to obtain critical medical history and explain the needed procedures directly in sign language.",
-        signImage: require('../assets/images/placeholder-avatar.png'),
+        signImage: require('../assets/Handsign/D.png'),
         choices: [
           { 
             text: "The patient was confused by Dr. Leila's signing.", 
@@ -360,7 +360,7 @@ const storyData: StoryType[] = [
       {
         id: 4,
         text: "The patient was relieved to communicate directly with the doctor. Dr. Leila clearly explained the diagnosis of acute pericarditis, the treatment plan, and answered all questions in fluent medical sign language. The patient later told the hospital administration how much of a difference Dr. Leila's signing skills made in a frightening situation.",
-        signImage: require('../assets/images/placeholder-avatar.png'),
+        signImage: require('../assets/Handsign/J.png'),
         choices: [
           { 
             text: "Dr. Leila was satisfied with her current level of signing.", 
@@ -369,8 +369,8 @@ const storyData: StoryType[] = [
           },
           { 
             text: "Dr. Leila continued her education by joining a medical sign language research team.", 
-            isCorrect: false, 
-            feedback: 'Not quite. Dr. Leila clearly explained the diagnosis of acute pericarditis, the treatment plan, and answered all questions in fluent medical sign language.'
+            isCorrect: true, 
+            feedback: 'Great! Dr. Leila continued her education by joining a medical sign language research team.'
           },
           { 
             text: "Dr. Leila decided interpreters were still better than direct communication.", 
@@ -382,7 +382,7 @@ const storyData: StoryType[] = [
       {
         id: 5,
         text: "Dr. Leila joined a medical sign language research team developing standardized signs for new medical procedures and technologies. Her experiences led to hospital-wide training programs for medical staff and improved protocols for Deaf patient care. She eventually published research on how direct communication improved medical outcomes for Deaf patients.",
-        signImage: require('../assets/images/placeholder-avatar.png'),
+          signImage: require('../assets/Handsign/S.png'),
         choices: [
           { 
             text: "The End", 

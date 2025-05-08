@@ -14,6 +14,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { GamesScreenProps, GamesStackParamList } from '../types/navigation';
 import { useTheme } from '../context/ThemeContext';
+import { useTranslation } from 'react-i18next';
 
 type GameCategoryType = {
   id: string;
@@ -40,6 +41,7 @@ const GameCard = ({
   onPress,
 }: GameCardProps) => {
   const { isDarkMode } = useTheme();
+  const { t } = useTranslation();
   
   return (
     <TouchableOpacity style={styles.gameCardContainer} onPress={onPress} activeOpacity={0.9}>
@@ -65,7 +67,7 @@ const GameCard = ({
           </Text>
           <View style={styles.playButtonContainer}>
             <View style={styles.playButton}>
-              <Text style={styles.playButtonText}>PLAY</Text>
+              <Text style={styles.playButtonText}>{t('games.playGame')}</Text>
             </View>
           </View>
         </View>
@@ -77,18 +79,19 @@ const GameCard = ({
 const GamesScreen = ({ navigation }: GamesScreenProps) => {
   const { width } = useWindowDimensions();
   const { theme, isDarkMode } = useTheme();
+  const { t } = useTranslation();
 
   const categories: GameCategoryType[] = [
-    { id: 'math', name: 'Math', icon: require('../assets/images/placeholder-avatar.png') },
-    { id: 'science', name: 'Science', icon: require('../assets/images/placeholder-avatar.png') },
-    { id: 'grammar', name: 'Grammar', icon: require('../assets/images/placeholder-avatar.png') },
-    { id: 'music', name: 'Music', icon: require('../assets/images/placeholder-avatar.png') },
+    { id: 'math', name: t('games.categories.math'), icon: require('../assets/images/placeholder-avatar.png') },
+    { id: 'science', name: t('games.categories.science'), icon: require('../assets/images/placeholder-avatar.png') },
+    { id: 'grammar', name: t('games.categories.grammar'), icon: require('../assets/images/placeholder-avatar.png') },
+    { id: 'music', name: t('games.categories.music'), icon: require('../assets/images/placeholder-avatar.png') },
   ];
 
   const recentGames = [
     {
       id: 1,
-      title: 'Memory Sequence',
+      title: t('games.memoryMatch'),
       icon: 'cards',
       color1: '#F857A6',
       color2: '#FF5858',
@@ -96,7 +99,7 @@ const GamesScreen = ({ navigation }: GamesScreenProps) => {
     },
     {
       id: 2,
-      title: 'Sign Language Quiz',
+      title: t('games.signLanguageQuiz'),
       icon: 'hand-okay',
       color1: '#FF6A88',
       color2: '#FF99AC',
@@ -107,7 +110,7 @@ const GamesScreen = ({ navigation }: GamesScreenProps) => {
   const newGames = [
     {
       id: 1,
-      title: 'Sign Language Quiz',
+      title: t('games.signLanguageQuiz'),
       icon: 'hand-okay',
       color1: '#FF6A88',
       color2: '#FF99AC',
@@ -116,7 +119,7 @@ const GamesScreen = ({ navigation }: GamesScreenProps) => {
     },
     {
       id: 2,
-      title: 'Memory Sequence',
+      title: t('games.memoryMatch'),
       icon: 'cards',
       color1: '#F857A6',
       color2: '#FF5858',
@@ -125,7 +128,7 @@ const GamesScreen = ({ navigation }: GamesScreenProps) => {
     },
     {
       id: 3,
-      title: 'Card Flipping',
+      title: t('games.flipCard'),
       icon: 'cards-playing-outline',
       color1: '#43E97B',
       color2: '#38F9D7',
@@ -134,7 +137,7 @@ const GamesScreen = ({ navigation }: GamesScreenProps) => {
     },
     {
       id: 4,
-      title: 'Story Time',
+      title: t('games.storyTime'),
       icon: 'book-open-variant',
       color1: '#FF8489',
       color2: '#D76EAD',
@@ -143,7 +146,7 @@ const GamesScreen = ({ navigation }: GamesScreenProps) => {
     },
     {
       id: 5,
-      title: 'Word Association',
+      title: t('games.wordAssociation'),
       icon: 'connection',
       color1: '#6D78E1',
       color2: '#00B4D8',
@@ -165,14 +168,14 @@ const GamesScreen = ({ navigation }: GamesScreenProps) => {
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={['top']}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-          <Text style={[styles.headerTitle, { color: theme.colors.text }]}>What do you want to play today?</Text>
+          <Text style={[styles.headerTitle, { color: theme.colors.text }]}>{t('games.whatDoYouWantToPlay')}</Text>
           <View style={[styles.diamondContainer, { backgroundColor: theme.colors.primary }]}>
             <Icon name="diamond-stone" size={16} color="#FFFFFF" />
             <Text style={styles.diamondCountText}>22</Text>
           </View>
         </View>
 
-        <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary }]}>RECENT</Text>
+        <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary }]}>{t('games.recentGames')}</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.recentGamesContainer}>
           {recentGames.map((game) => (
             <TouchableOpacity 
@@ -202,9 +205,9 @@ const GamesScreen = ({ navigation }: GamesScreenProps) => {
 
         <View style={styles.categoriesSection}>
           <View style={styles.categoriesHeader}>
-            <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary }]}>CATEGORIES</Text>
+            <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary }]}>{t('games.category')}</Text>
             <TouchableOpacity>
-              <Text style={[styles.seeAllText, { color: theme.colors.primary }]}>See all →</Text>
+              <Text style={[styles.seeAllText, { color: theme.colors.primary }]}>{t('common.seeAll')} →</Text>
             </TouchableOpacity>
           </View>
           <FlatList
@@ -217,7 +220,7 @@ const GamesScreen = ({ navigation }: GamesScreenProps) => {
           />
         </View>
 
-        <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary }]}>NEW GAMES</Text>
+        <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary }]}>{t('games.new')}</Text>
         <View style={styles.gameCardsContainer}>
           {newGames.map((game) => (
             <GameCard

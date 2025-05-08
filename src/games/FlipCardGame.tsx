@@ -18,6 +18,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import { useTheme } from '../context/ThemeContext';
 import { useIsFocused } from '@react-navigation/native';
 import { getHiddenTabBarStyle, getDefaultTabBarStyle, getBottomTabBarSpace, manageTabBarVisibility } from '../utils/tabBarStyles';
+import { useTranslation } from 'react-i18next';
 
 const { width, height } = Dimensions.get('window');
 
@@ -27,34 +28,34 @@ const levels = [
   {
     level: 1,
     pairs: [
-      { id: 1, symbol: 'A', meaning: 'Apple', image: require('../assets/images/placeholder-avatar.png') },
-      { id: 2, symbol: 'B', meaning: 'Ball', image: require('../assets/images/placeholder-avatar.png') },
-      { id: 3, symbol: 'C', meaning: 'Cat', image: require('../assets/images/placeholder-avatar.png') },
-      { id: 4, symbol: 'D', meaning: 'Dog', image: require('../assets/images/placeholder-avatar.png') },
-      { id: 5, symbol: 'E', meaning: 'Egg', image: require('../assets/images/placeholder-avatar.png') },
-      { id: 6, symbol: 'F', meaning: 'Fish', image: require('../assets/images/placeholder-avatar.png') },
+      { id: 1, symbol: 'A', meaning: 'Apple', image: require('../assets/Handsign/A.png') },
+      { id: 2, symbol: 'B', meaning: 'Ball', image: require('../assets/Handsign/B.png') },
+      { id: 3, symbol: 'C', meaning: 'Cat', image: require('../assets/Handsign/C.png') },
+      { id: 4, symbol: 'D', meaning: 'Dog', image: require('../assets/Handsign/D.png') },
+      { id: 5, symbol: 'E', meaning: 'Egg', image: require('../assets/Handsign/E.png') },
+      { id: 6, symbol: 'F', meaning: 'Fish', image: require('../assets/Handsign/F.png') },
     ],
   },
   {
     level: 2,
     pairs: [
-      { id: 7, symbol: 'G', meaning: 'Goat', image: require('../assets/images/placeholder-avatar.png') },
-      { id: 8, symbol: 'H', meaning: 'House', image: require('../assets/images/placeholder-avatar.png') },
-      { id: 9, symbol: 'I', meaning: 'Ice', image: require('../assets/images/placeholder-avatar.png') },
-      { id: 10, symbol: 'J', meaning: 'Jar', image: require('../assets/images/placeholder-avatar.png') },
-      { id: 11, symbol: 'K', meaning: 'Kite', image: require('../assets/images/placeholder-avatar.png') },
-      { id: 12, symbol: 'L', meaning: 'Lion', image: require('../assets/images/placeholder-avatar.png') },
+      { id: 7, symbol: 'G', meaning: 'Goat', image: require('../assets/Handsign/G.png') },
+      { id: 8, symbol: 'H', meaning: 'House', image: require('../assets/Handsign/H.png') },
+      { id: 9, symbol: 'I', meaning: 'Ice', image: require('../assets/Handsign/I.png') },
+      { id: 10, symbol: 'J', meaning: 'Jar', image: require('../assets/Handsign/J.png') },
+      { id: 11, symbol: 'K', meaning: 'Kite', image: require('../assets/Handsign/K.png') },
+      { id: 12, symbol: 'L', meaning: 'Lion', image: require('../assets/Handsign/L.png') },
     ],
   },
   {
     level: 3,
     pairs: [
-      { id: 13, symbol: 'M', meaning: 'Mouse', image: require('../assets/images/placeholder-avatar.png') },
-      { id: 14, symbol: 'N', meaning: 'Nest', image: require('../assets/images/placeholder-avatar.png') },
-      { id: 15, symbol: 'O', meaning: 'Orange', image: require('../assets/images/placeholder-avatar.png') },
-      { id: 16, symbol: 'P', meaning: 'Pen', image: require('../assets/images/placeholder-avatar.png') },
-      { id: 17, symbol: 'Q', meaning: 'Queen', image: require('../assets/images/placeholder-avatar.png') },
-      { id: 18, symbol: 'R', meaning: 'Rabbit', image: require('../assets/images/placeholder-avatar.png') },
+      { id: 13, symbol: 'M', meaning: 'Mouse', image: require('../assets/Handsign/M.png') },
+      { id: 14, symbol: 'N', meaning: 'Nest', image: require('../assets/Handsign/N.png') },
+      { id: 15, symbol: 'O', meaning: 'Orange', image: require('../assets/Handsign/O.png') },
+      { id: 16, symbol: 'P', meaning: 'Pen', image: require('../assets/Handsign/P.png') },
+      { id: 17, symbol: 'Q', meaning: 'Queen', image: require('../assets/Handsign/Q.png') },
+      { id: 18, symbol: 'R', meaning: 'Rabbit', image: require('../assets/Handsign/R.png') },
     ],
   },
 ];
@@ -74,6 +75,7 @@ type CardType = {
 
 const FlipCardGame = ({ navigation, route }: NavigationProps) => {
   const { theme, isDarkMode } = useTheme();
+  const { t } = useTranslation();
   const [currentLevel, setCurrentLevel] = useState(1);
   const [score, setScore] = useState(0);
   const [moves, setMoves] = useState(0);
@@ -259,18 +261,18 @@ const FlipCardGame = ({ navigation, route }: NavigationProps) => {
     
     setTimeout(() => {
       Alert.alert(
-        'Level Completed!',
-        `You've completed level ${currentLevel} in ${timer} seconds with ${moves} moves.\nBonus points: ${bonusPoints}\nTotal Score: ${totalScore}`,
+        t('games.levelCompleted'),
+        t('games.levelCompletedMessage', { level: currentLevel, time: timer, moves: moves, bonus: bonusPoints, total: totalScore }),
         [
           {
-            text: 'Next Level',
+            text: t('games.nextLevel'),
             onPress: () => {
               if (currentLevel < levels.length) {
                 setCurrentLevel(currentLevel + 1);
                 resetGame();
               } else {
                 // Game completed
-                Alert.alert('Congratulations!', 'You have completed all levels!');
+                Alert.alert(t('games.congratulations'), t('games.allLevelsCompleted'));
                 navigation.goBack();
               }
             },
@@ -306,11 +308,11 @@ const FlipCardGame = ({ navigation, route }: NavigationProps) => {
     }
     
     Alert.alert(
-      'Game Paused',
-      'Do you want to continue playing?',
+      t('games.gamePaused'),
+      t('games.continuePlaying'),
       [
         {
-          text: 'Resume',
+          text: t('games.resume'),
           onPress: () => {
             const id = setInterval(() => {
               setTimer(prev => prev + 1);
@@ -319,7 +321,7 @@ const FlipCardGame = ({ navigation, route }: NavigationProps) => {
           },
         },
         {
-          text: 'Quit',
+          text: t('games.quit'),
           onPress: () => {
             resetGame();
             navigation.goBack();
@@ -415,7 +417,7 @@ const FlipCardGame = ({ navigation, route }: NavigationProps) => {
         <TouchableOpacity onPress={() => navigation.goBack()} style={[styles.headerButton, { backgroundColor: isDarkMode ? '#333333' : '#F0E6FF' }]}>
           <Icon name="arrow-left" size={24} color={theme.colors.primary} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: theme.colors.text }]}>Flip Card Game</Text>
+        <Text style={[styles.headerTitle, { color: theme.colors.text }]}>{t('games.flipCard')}</Text>
         <TouchableOpacity onPress={pauseGame} style={[styles.headerButton, { backgroundColor: isDarkMode ? '#333333' : '#F0E6FF' }]}>
           <Icon name={gameStarted ? "pause" : "information"} size={24} color={theme.colors.primary} />
         </TouchableOpacity>
@@ -425,19 +427,19 @@ const FlipCardGame = ({ navigation, route }: NavigationProps) => {
         <>
           <View style={styles.gameInfo}>
             <View style={[styles.infoItem, { backgroundColor: isDarkMode ? '#1E1E1E' : '#FFFFFF' }]}>
-              <Text style={[styles.infoLabel, { color: theme.colors.textSecondary }]}>Level</Text>
+              <Text style={[styles.infoLabel, { color: theme.colors.textSecondary }]}>{t('games.level')}</Text>
               <Text style={[styles.infoValue, { color: theme.colors.text }]}>{currentLevel}</Text>
             </View>
             <View style={[styles.infoItem, { backgroundColor: isDarkMode ? '#1E1E1E' : '#FFFFFF' }]}>
-              <Text style={[styles.infoLabel, { color: theme.colors.textSecondary }]}>Score</Text>
+              <Text style={[styles.infoLabel, { color: theme.colors.textSecondary }]}>{t('games.score')}</Text>
               <Text style={[styles.infoValue, { color: theme.colors.text }]}>{score}</Text>
             </View>
             <View style={[styles.infoItem, { backgroundColor: isDarkMode ? '#1E1E1E' : '#FFFFFF' }]}>
-              <Text style={[styles.infoLabel, { color: theme.colors.textSecondary }]}>Time</Text>
+              <Text style={[styles.infoLabel, { color: theme.colors.textSecondary }]}>{t('games.time')}</Text>
               <Text style={[styles.infoValue, { color: theme.colors.text }]}>{formatTime(timer)}</Text>
             </View>
             <View style={[styles.infoItem, { backgroundColor: isDarkMode ? '#1E1E1E' : '#FFFFFF' }]}>
-              <Text style={[styles.infoLabel, { color: theme.colors.textSecondary }]}>Moves</Text>
+              <Text style={[styles.infoLabel, { color: theme.colors.textSecondary }]}>{t('games.moves')}</Text>
               <Text style={[styles.infoValue, { color: theme.colors.text }]}>{moves}</Text>
             </View>
           </View>
@@ -460,17 +462,17 @@ const FlipCardGame = ({ navigation, route }: NavigationProps) => {
             style={styles.welcomeImage} 
           />
           
-          <Text style={[styles.welcomeTitle, { color: theme.colors.text }]}>Flip Card Game</Text>
+          <Text style={[styles.welcomeTitle, { color: theme.colors.text }]}>{t('games.flipCard')}</Text>
           <Text style={[styles.welcomeDescription, { color: theme.colors.textSecondary }]}>
-            Match the sign language symbols with their meanings. Flip cards to find matching pairs!
+            {t('games.flipCardDescription')}
           </Text>
           
           <View style={styles.levelInfo}>
             <Text style={[styles.levelInfoText, { color: theme.colors.text }]}>
-              You are on Level {currentLevel}
+              {t('games.youAreOnLevel', { level: currentLevel })}
             </Text>
             <Text style={[styles.levelInfoSubtext, { color: theme.colors.textSecondary }]}>
-              Complete levels to unlock more challenges
+              {t('games.completeLevelsToUnlock')}
             </Text>
           </View>
           
@@ -481,7 +483,7 @@ const FlipCardGame = ({ navigation, route }: NavigationProps) => {
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
             >
-              <Text style={styles.startButtonText}>Start Game</Text>
+              <Text style={styles.startButtonText}>{t('games.startGame')}</Text>
             </LinearGradient>
           </TouchableOpacity>
         </View>

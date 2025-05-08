@@ -23,35 +23,35 @@ const signs = [
   {
     id: 1,
     letter: 'A',
-    image: require('../assets/images/placeholder-avatar.png'),
+    image: require('../assets/Handsign/A.png'),
     options: ['A', 'B', 'C', 'X'],
     isCompleted: false,
   },
   {
     id: 2,
     letter: 'B',
-    image: require('../assets/images/placeholder-avatar.png'),
+    image: require('../assets/Handsign/B.png'),
     options: ['Y', 'B', 'D', 'K'],
     isCompleted: false,
   },
   {
     id: 3,
     letter: 'C',
-    image: require('../assets/images/placeholder-avatar.png'),
+    image: require('../assets/Handsign/C.png'),
     options: ['Z', 'P', 'C', 'Q'],
     isCompleted: false,
   },
   {
     id: 4,
     letter: 'D',
-    image: require('../assets/images/placeholder-avatar.png'),
+    image: require('../assets/Handsign/D.png'),
     options: ['D', 'E', 'F', 'G'],
     isCompleted: false,
   },
   {
     id: 5,
     letter: 'E',
-    image: require('../assets/images/placeholder-avatar.png'),
+    image: require('../assets/Handsign/E.png'),
     options: ['J', 'K', 'E', 'L'],
     isCompleted: false,
   },
@@ -352,7 +352,7 @@ const WordMemorizationGame = ({ navigation }: WordMemorizationGameProps) => {
             <Image source={sign.image} style={styles.signImage} />
           </View>
           
-          <Text style={styles.questionText}>What is this letter?</Text>
+          <Text style={styles.questionText}>Which word starts with this letter?</Text>
         </View>
         
         <View style={styles.optionsContainer}>

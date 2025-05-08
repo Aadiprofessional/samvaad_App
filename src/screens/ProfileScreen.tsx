@@ -20,6 +20,9 @@ import { useAuth } from '../context/AuthContext';
 import { scale, verticalScale } from '../utils/responsive';
 import EditProfileModal from '../components/profile/EditProfileModal';
 import { getHiddenTabBarStyle, getVisibleTabBarStyle, manageTabBarVisibility } from '../utils/tabBarStyles';
+import { useTranslation } from 'react-i18next';
+import { useLanguage } from '../context/LanguageContext';
+import LanguageSelectionModal from '../components/profile/LanguageSelectionModal';
 
 const { width } = Dimensions.get('window');
 
@@ -27,10 +30,13 @@ const ProfileScreen = ({ navigation }: HomeScreenProps) => {
   const [notifications, setNotifications] = useState(true);
   const [soundEffects, setSoundEffects] = useState(true);
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
+  const [showLanguageModal, setShowLanguageModal] = useState(false);
   
   // Connect to the theme context
   const { theme, isDarkMode, toggleTheme } = useTheme();
   const { user, profile, signOut, refreshProfile } = useAuth();
+  const { t } = useTranslation();
+  const { language } = useLanguage();
   
   // Fix to hide bottom tab when viewing profile
   const isFocused = useIsFocused();
@@ -122,15 +128,15 @@ const ProfileScreen = ({ navigation }: HomeScreenProps) => {
 
   const handleLogout = async () => {
     Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
+      t('common.logout'),
+      t('common.logoutConfirmation'),
       [
         {
-          text: 'Cancel',
+          text: t('common.cancel'),
           style: 'cancel'
         },
         {
-          text: 'Logout',
+          text: t('common.logout'),
           onPress: async () => {
             try {
               const success = await signOut();
@@ -163,7 +169,7 @@ const ProfileScreen = ({ navigation }: HomeScreenProps) => {
         <TouchableOpacity onPress={() => navigation.goBack()} style={[styles.backButton, { backgroundColor: isDarkMode ? '#333333' : '#F0E6FF' }]}>
           <Icon name="arrow-left" size={24} color={theme.colors.primary} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: theme.colors.text }]}>My Profile</Text>
+        <Text style={[styles.headerTitle, { color: theme.colors.text }]}>{t('profile.myProfile')}</Text>
         <TouchableOpacity 
           style={[styles.editButton, { backgroundColor: isDarkMode ? '#333333' : '#F0E6FF' }]}
           onPress={() => setShowEditProfileModal(true)}
@@ -189,9 +195,9 @@ const ProfileScreen = ({ navigation }: HomeScreenProps) => {
 
           <View style={styles.levelContainer}>
             <View style={styles.levelInfo}>
-              <Text style={[styles.levelText, { color: theme.colors.text }]}>Level {userData.level}</Text>
+              <Text style={[styles.levelText, { color: theme.colors.text }]}>{t('profile.level')} {userData.level}</Text>
               <Text style={[styles.xpText, { color: theme.colors.textSecondary }]}>
-                {userData.xp}/{userData.nextLevelXp} XP
+                {userData.xp}/{userData.nextLevelXp} {t('profile.xp')}
               </Text>
             </View>
             <View style={[styles.progressBar, { backgroundColor: isDarkMode ? '#333333' : '#EEEEEE' }]}>
@@ -199,9 +205,9 @@ const ProfileScreen = ({ navigation }: HomeScreenProps) => {
                 style={[
                   styles.progressFill,
                   { 
-                    backgroundColor: theme.colors.primary, 
-                    width: `${(userData.xp / userData.nextLevelXp) * 100}%` 
-                  },
+                    width: `${(userData.xp / userData.nextLevelXp) * 100}%`,
+                    backgroundColor: theme.colors.primary,
+                  }
                 ]}
               />
             </View>
@@ -209,38 +215,32 @@ const ProfileScreen = ({ navigation }: HomeScreenProps) => {
         </View>
 
         <View style={styles.statsSection}>
-          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Statistics</Text>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>{t('profile.settings')}</Text>
           <View style={styles.statsGrid}>
-            <View style={[styles.statItem, { backgroundColor: isDarkMode ? '#1E1E1E' : '#FFFFFF' }]}>
-              <View style={[styles.statIconContainer, { backgroundColor: isDarkMode ? '#333333' : '#FFF0F5' }]}>
-                <Icon name="trophy" size={24} color="#F86CA7" />
-              </View>
-              <Text style={[styles.statValue, { color: theme.colors.text }]}>{userData.achievements}</Text>
-              <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>Achievements</Text>
+            <View style={[styles.statItem, { backgroundColor: isDarkMode ? '#333333' : theme.colors.card }]}>
+              <Icon name="trophy" size={24} color={theme.colors.primary} />
+              <Text style={[styles.statCount, { color: theme.colors.text }]}>{userData.achievements}</Text>
+              <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>{t('profile.achievements')}</Text>
             </View>
-            <View style={[styles.statItem, { backgroundColor: isDarkMode ? '#1E1E1E' : '#FFFFFF' }]}>
-              <View style={[styles.statIconContainer, { backgroundColor: isDarkMode ? '#333333' : '#F0F8FF' }]}>
-                <Icon name="book-open-variant" size={24} color="#2575fc" />
-              </View>
-              <Text style={[styles.statValue, { color: theme.colors.text }]}>{userData.totalCompletedLessons}</Text>
-              <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>Lessons</Text>
+            <View style={[styles.statItem, { backgroundColor: isDarkMode ? '#333333' : theme.colors.card }]}>
+              <Icon name="book-open-page-variant" size={24} color={theme.colors.primary} />
+              <Text style={[styles.statCount, { color: theme.colors.text }]}>{userData.totalCompletedLessons}</Text>
+              <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>{t('profile.completedLessons')}</Text>
             </View>
-            <View style={[styles.statItem, { backgroundColor: isDarkMode ? '#1E1E1E' : '#FFFFFF' }]}>
-              <View style={[styles.statIconContainer, { backgroundColor: isDarkMode ? '#333333' : '#F0FFF0' }]}>
-                <Icon name="gamepad-variant" size={24} color="#38ef7d" />
-              </View>
-              <Text style={[styles.statValue, { color: theme.colors.text }]}>{userData.totalGamesPlayed}</Text>
-              <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>Games</Text>
+            <View style={[styles.statItem, { backgroundColor: isDarkMode ? '#333333' : theme.colors.card }]}>
+              <Icon name="gamepad-variant" size={24} color={theme.colors.primary} />
+              <Text style={[styles.statCount, { color: theme.colors.text }]}>{userData.totalGamesPlayed}</Text>
+              <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>{t('profile.gamesPlayed')}</Text>
             </View>
           </View>
         </View>
 
         <View style={styles.settingsSection}>
-          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Settings</Text>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>{t('profile.settings')}</Text>
           <View style={[styles.settingItem, { borderBottomColor: isDarkMode ? '#333333' : '#EEEEEE' }]}>
             <View style={styles.settingLeft}>
-              <Icon name="bell-outline" size={24} color={theme.colors.primary} />
-              <Text style={[styles.settingText, { color: theme.colors.text }]}>Notifications</Text>
+              <Icon name="bell" size={24} color={theme.colors.primary} />
+              <Text style={[styles.settingText, { color: theme.colors.text }]}>{t('profile.notifications')}</Text>
             </View>
             <Switch
               value={notifications}
@@ -252,7 +252,7 @@ const ProfileScreen = ({ navigation }: HomeScreenProps) => {
           <View style={[styles.settingItem, { borderBottomColor: isDarkMode ? '#333333' : '#EEEEEE' }]}>
             <View style={styles.settingLeft}>
               <Icon name="theme-light-dark" size={24} color={theme.colors.primary} />
-              <Text style={[styles.settingText, { color: theme.colors.text }]}>Dark Mode</Text>
+              <Text style={[styles.settingText, { color: theme.colors.text }]}>{t('profile.darkMode')}</Text>
             </View>
             <Switch
               value={isDarkMode}
@@ -264,7 +264,7 @@ const ProfileScreen = ({ navigation }: HomeScreenProps) => {
           <View style={[styles.settingItem, { borderBottomColor: isDarkMode ? '#333333' : '#EEEEEE' }]}>
             <View style={styles.settingLeft}>
               <Icon name="volume-high" size={24} color={theme.colors.primary} />
-              <Text style={[styles.settingText, { color: theme.colors.text }]}>Sound Effects</Text>
+              <Text style={[styles.settingText, { color: theme.colors.text }]}>{t('profile.soundEffects')}</Text>
             </View>
             <Switch
               value={soundEffects}
@@ -273,14 +273,29 @@ const ProfileScreen = ({ navigation }: HomeScreenProps) => {
               thumbColor={soundEffects ? theme.colors.primary : isDarkMode ? '#888888' : '#F4F3F4'}
             />
           </View>
+          <TouchableOpacity 
+            style={[styles.settingItem, { borderBottomColor: isDarkMode ? '#333333' : '#EEEEEE' }]}
+            onPress={() => setShowLanguageModal(true)}
+          >
+            <View style={styles.settingLeft}>
+              <Icon name="translate" size={24} color={theme.colors.primary} />
+              <Text style={[styles.settingText, { color: theme.colors.text }]}>{t('language.changeLanguage')}</Text>
+            </View>
+            <View style={styles.languageIndicator}>
+              <Text style={[styles.languageText, { color: theme.colors.textSecondary }]}>
+                {language === 'en' ? t('language.english') : t('language.hindi')}
+              </Text>
+              <Icon name="chevron-right" size={20} color={isDarkMode ? '#888888' : '#CCCCCC'} />
+            </View>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.accountSection}>
-          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Account</Text>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>{t('profile.settings')}</Text>
           <TouchableOpacity style={[styles.accountItem, { borderBottomColor: isDarkMode ? '#333333' : '#EEEEEE' }]}>
             <View style={styles.accountItemLeft}>
               <Icon name="shield-account" size={24} color={theme.colors.primary} />
-              <Text style={[styles.accountItemText, { color: theme.colors.text }]}>Privacy</Text>
+              <Text style={[styles.accountItemText, { color: theme.colors.text }]}>{t('profile.privacy')}</Text>
             </View>
             <Icon name="chevron-right" size={20} color={isDarkMode ? '#888888' : '#CCCCCC'} />
           </TouchableOpacity>
@@ -290,21 +305,21 @@ const ProfileScreen = ({ navigation }: HomeScreenProps) => {
           >
             <View style={styles.accountItemLeft}>
               <Icon name="lock-reset" size={24} color={theme.colors.primary} />
-              <Text style={[styles.accountItemText, { color: theme.colors.text }]}>Change Password</Text>
+              <Text style={[styles.accountItemText, { color: theme.colors.text }]}>{t('profile.changePassword')}</Text>
             </View>
             <Icon name="chevron-right" size={20} color={isDarkMode ? '#888888' : '#CCCCCC'} />
           </TouchableOpacity>
           <TouchableOpacity style={[styles.accountItem, { borderBottomColor: isDarkMode ? '#333333' : '#EEEEEE' }]}>
             <View style={styles.accountItemLeft}>
               <Icon name="help-circle" size={24} color={theme.colors.primary} />
-              <Text style={[styles.accountItemText, { color: theme.colors.text }]}>Help & Support</Text>
+              <Text style={[styles.accountItemText, { color: theme.colors.text }]}>{t('profile.helpSupport')}</Text>
             </View>
             <Icon name="chevron-right" size={20} color={isDarkMode ? '#888888' : '#CCCCCC'} />
           </TouchableOpacity>
           <TouchableOpacity style={[styles.accountItem, { borderBottomColor: isDarkMode ? '#333333' : '#EEEEEE' }]}>
             <View style={styles.accountItemLeft}>
               <Icon name="information" size={24} color={theme.colors.primary} />
-              <Text style={[styles.accountItemText, { color: theme.colors.text }]}>About App</Text>
+              <Text style={[styles.accountItemText, { color: theme.colors.text }]}>{t('profile.aboutApp')}</Text>
             </View>
             <Icon name="chevron-right" size={20} color={isDarkMode ? '#888888' : '#CCCCCC'} />
           </TouchableOpacity>
@@ -319,7 +334,7 @@ const ProfileScreen = ({ navigation }: HomeScreenProps) => {
         >
           <View style={styles.logoutContent}>
             <Icon name="logout" size={20} color="#FFFFFF" />
-            <Text style={styles.logoutText}>Logout</Text>
+            <Text style={styles.logoutText}>{t('common.logout')}</Text>
           </View>
         </TouchableOpacity>
       </ScrollView>
@@ -328,6 +343,12 @@ const ProfileScreen = ({ navigation }: HomeScreenProps) => {
       <EditProfileModal 
         visible={showEditProfileModal}
         onClose={() => setShowEditProfileModal(false)}
+      />
+      
+      {/* Language Selection Modal */}
+      <LanguageSelectionModal
+        visible={showLanguageModal}
+        onClose={() => setShowLanguageModal(false)}
       />
     </SafeAreaView>
   );
@@ -450,15 +471,7 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 2,
   },
-  statIconContainer: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  statValue: {
+  statCount: {
     fontSize: 20,
     fontWeight: 'bold',
     marginBottom: 5,
@@ -522,6 +535,14 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 16,
     marginLeft: 10,
+  },
+  languageIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  languageText: {
+    marginRight: 5,
+    fontSize: 14,
   },
 });
 

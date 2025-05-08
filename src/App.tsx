@@ -4,9 +4,13 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+// Initialize i18n
+import './i18n';
+
 // Contexts
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { LanguageProvider } from './context/LanguageContext';
 
 // Screens
 import SplashScreen from './screens/SplashScreen';
@@ -70,7 +74,9 @@ const App = () => {
     <SafeAreaProvider>
       <ThemeProvider>
         <AuthProvider>
-          <AppNavigator />
+          <LanguageProvider>
+            <AppNavigator />
+          </LanguageProvider>
         </AuthProvider>
       </ThemeProvider>
     </SafeAreaProvider>

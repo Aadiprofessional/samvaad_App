@@ -25,6 +25,7 @@ import AppNavigator from './src/navigation/AppNavigator';
 // Import theme provider
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { AuthProvider } from './src/context/AuthContext';
+import { LanguageProvider } from './src/context/LanguageContext';
 
 // Import types
 import { RootStackParamList } from './src/types/navigation';
@@ -84,7 +85,9 @@ const App = () => {
       <SafeAreaProvider>
         <ThemeProvider>
           <AuthProvider>
-            <AppContent />
+            <LanguageProvider>
+              <AppContent />
+            </LanguageProvider>
           </AuthProvider>
         </ThemeProvider>
       </SafeAreaProvider>
